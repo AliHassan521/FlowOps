@@ -1,0 +1,6 @@
+@FlowOps.Api_HostAddress = http://localhost:5144
+
+GET {{FlowOps.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FlowOps.Api/FlowOps.Api.csproj" />
+    <Project Path="src/FlowOps.Application/FlowOps.Application.csproj" />
+    <Project Path="src/FlowOps.Contracts/FlowOps.Contracts.csproj" />
+    <Project Path="src/FlowOps.Domain/FlowOps.Domain.csproj" />
+    <Project Path="src/FlowOps.Infrastructure/FlowOps.Infrastructure.csproj" />
+  </Folder>
+</Solution>
