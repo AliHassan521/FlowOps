@@ -225,7 +225,7 @@ The server must determine authorization from authenticated identity and resource
 - Organization- and project-scoped queries include the requested organization ID and active membership. Cross-tenant requests from nonmembers return not found to avoid exposing resource existence; role restrictions for an active member return forbidden.
 - Only Admin and TeamLead can create or update projects; only Admin can archive them. All active organization members can read projects.
 - Organization and project keys/slugs have database unique indexes. Project keys are unique per organization.
-- Organization, membership, and project mutations write audit records in the same EF Core save/transaction as the business change.
+- Organization, membership, and project mutations write audit records in the same EF Core save/transaction as the business change. The application DbContext rejects audit-event updates and deletions, preserving append-only history through normal persistence paths.
 - Organization and project deactivation is soft; their rows and audit history remain in the database. Access still follows the active organization/membership rules.
 
 Only an organization Admin can change memberships. Requested roles are validated against the seeded role catalog; client-supplied role names never bypass the database membership check.

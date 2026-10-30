@@ -22,12 +22,12 @@ Phases 2 and 3 have working implementations; learning sign-off is pending:
 - Project creation, listing, details, updates, and archival
 - Project keys unique within an organization
 - Tenant authorization enforced from active database membership
-- Audit events for organization, membership, and project changes
+- Append-only audit events for organization, membership, and project changes
 - Angular organization, member, and project workspace UI
 
 The automated API tests use SQLite in memory. SQL Server migrations were applied to
 the configured SQL Server Express database and to an isolated Phase 3 validation
-database. Integration coverage currently has 27 backend tests and 17 Angular tests.
+database. Integration coverage currently has 28 backend tests and 17 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
 vulnerabilities. A live SQL Server smoke flow verified registration, organization
 creation, project creation, listing, and authenticated reads. The local Angular app

@@ -310,6 +310,38 @@ public sealed class AuthApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Audit_events_cannot_be_updated_or_deleted_through_the_application_context()
+    {
+        await RegisterAndAuthorizeAsync("audit-owner@example.com");
+        using var create = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Audit Team", "audit-team", null));
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+
+        Guid auditEventId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+            auditEventId = await dbContext.AuditEvents.Select(auditEvent => auditEvent.Id).SingleAsync();
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+            var auditEvent = await dbContext.AuditEvents.SingleAsync(item => item.Id == auditEventId);
+            auditEvent.Action = "Audit.Tampered";
+            await Assert.ThrowsAsync<InvalidOperationException>(() => dbContext.SaveChangesAsync());
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+            var auditEvent = await dbContext.AuditEvents.SingleAsync(item => item.Id == auditEventId);
+            dbContext.AuditEvents.Remove(auditEvent);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => dbContext.SaveChangesAsync());
+        }
+    }
+
+    [Fact]
     public async Task Projects_enforce_organization_scope_and_role_rules_and_audit_changes()
     {
         var admin = await RegisterAndAuthorizeAsync("project-admin@example.com");
