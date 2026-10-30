@@ -12,7 +12,7 @@ Do not jump ahead because another technology looks interesting.
 
 - **Current phase:** Phase 2 — Authentication & Authorization
 - **Current task:** Complete the authentication understanding check.
-- **Verified so far:** Release backend build; 24 backend tests; all five migrations applied to a fresh SQL Server LocalDB database with schema and role seed verified; live API health, registration, protected profile, refresh rotation/replay revocation, and logout smoke checks pass against that database; frontend build; 6 frontend tests; npm audit; and NuGet vulnerability scan pass.
+- **Verified so far:** Release backend build; 24 backend tests; all five migrations applied to the configured SQL Server Express database and to a fresh LocalDB validation database; existing password hashes and refresh-token rotation families preserved; live API health, registration, protected profile, refresh rotation/replay revocation, and logout smoke checks pass against the validation database; frontend build; 6 frontend tests; npm audit; and NuGet vulnerability scan pass.
 - **Next phase:** Phase 3 — Organizations, Projects & Membership, after Phase 2 acceptance and the authentication understanding check are complete.
 
 ---

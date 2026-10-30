@@ -17,11 +17,12 @@ Phase 2 authentication code is implemented and verified; phase sign-off is pendi
 - Angular login, route guard, interceptor, refresh, and logout flow
 - API integration tests for the authentication pipeline
 
-The automated API tests use SQLite in memory. The SQL Server migrations were also
-applied to a fresh SQL Server LocalDB validation database. A live API smoke run against
-that database verified health, registration, protected profile access, refresh rotation
-and replay revocation, and logout. The temporary smoke-test account was removed. The
-authentication learning check is still pending.
+The automated API tests use SQLite in memory. The SQL Server migrations were applied
+to the configured SQL Server Express database and a fresh LocalDB validation database;
+existing password hashes and refresh-token rotation families were preserved. A live
+API smoke run against the validation database verified health, registration, protected
+profile access, refresh rotation and replay revocation, and logout. The temporary
+smoke-test account was removed. The authentication learning check is still pending.
 
 This is an early development milestone, not a deploy-ready product. Organizations,
 projects, work items, incidents, releases, SLAs, notifications, Docker, CI/CD, and
