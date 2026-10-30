@@ -1,0 +1,16 @@
+:host { display: block; }
+.workspace-topbar { display: flex; min-height: 4.6rem; align-items: center; gap: clamp(1rem, 4vw, 3rem); padding: .6rem clamp(1rem, 4vw, 4rem); border-bottom: 1px solid #e8edf5; background: rgb(255 255 255 / 88%); }
+.workspace-brand { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .55rem; color: #152447; font-size: 1.18rem; font-weight: 800; letter-spacing: -.05em; text-decoration: none; }
+.brand-mark { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: .65rem; background: linear-gradient(145deg, #645cf5, #3c82ef); box-shadow: 0 5px 12px rgb(80 94 226 / 24%); color: #fff; font-size: 1rem; font-weight: 850; }
+.workspace-nav { display: flex; height: 3.4rem; align-items: center; gap: .35rem; }
+.workspace-nav a { display: inline-flex; height: 2.5rem; align-items: center; gap: .5rem; padding: 0 .9rem; border-radius: .65rem; color: #66738b; font-size: .84rem; font-weight: 650; text-decoration: none; transition: background .16s ease, color .16s ease; }
+.workspace-nav a:hover { background: #f3f5fc; color: #283a60; }
+.workspace-nav a.active { background: #f0f1ff; color: #5149c8; }
+.workspace-nav a span { font-size: 1rem; }
+.workspace-account { display: flex; align-items: center; gap: .65rem; margin-left: auto; }
+.account-avatar { display: grid; width: 2.1rem; height: 2.1rem; flex: 0 0 auto; place-items: center; border: 2px solid #fff; border-radius: 50%; background: linear-gradient(145deg, #dfe3ff, #c7e8f3); box-shadow: 0 0 0 1px #e0e4ee; color: #3d467e; font-size: .68rem; font-weight: 800; }
+.account-name { max-width: 11rem; overflow: hidden; color: #394663; font-size: .8rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.signout-button { margin-left: .25rem; padding: .52rem .75rem; border: 1px solid #e2e6ee; border-radius: .6rem; background: #fff; color: #66738b; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; transition: border .16s ease, color .16s ease, background .16s ease; }
+.signout-button:hover { border-color: #cfd5e4; background: #fafbfe; color: #313d59; }
+@media (max-width: 700px) { .workspace-topbar { flex-wrap: wrap; gap: .2rem .7rem; padding: .65rem 1rem; } .workspace-nav { order: 3; width: 100%; height: 2.9rem; } .workspace-account { gap: .45rem; } .account-name { max-width: 7rem; } }
+@media (max-width: 420px) { .account-name { display: none; } .signout-button { padding: .48rem .6rem; } .workspace-nav a { flex: 1; justify-content: center; padding-inline: .5rem; } }

@@ -1,0 +1,14 @@
+<header class="workspace-topbar">
+  <a class="workspace-brand" routerLink="/dashboard" aria-label="FlowOps overview">
+    <span class="brand-mark" aria-hidden="true">F</span><span>flowops</span>
+  </a>
+  <nav class="workspace-nav" aria-label="Primary navigation">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" [attr.aria-current]="section() === 'overview' ? 'page' : null"><span aria-hidden="true">◫</span> Overview</a>
+    <a routerLink="/organizations" routerLinkActive="active" [attr.aria-current]="section() === 'workspaces' ? 'page' : null"><span aria-hidden="true">▦</span> Workspaces</a>
+  </nav>
+  <div class="workspace-account">
+    <span class="account-avatar" aria-hidden="true">{{ initials() }}</span>
+    <span class="account-name">{{ auth.currentUser()?.fullName }}</span>
+    <button type="button" class="signout-button" (click)="signOut()" aria-label="Sign out of FlowOps">Sign out</button>
+  </div>
+</header>

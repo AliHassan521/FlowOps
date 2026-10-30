@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable, finalize, shareReplay, tap } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { AuthResponse, LoginRequest } from './auth.models';
+import { AuthResponse, LoginRequest, RegisterRequest } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -23,6 +23,12 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${API_BASE_URL}/auth/login`, credentials, { withCredentials: true })
+      .pipe(tap((response) => this.session.set(response)));
+  }
+
+  register(input: RegisterRequest): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${API_BASE_URL}/auth/register`, input, { withCredentials: true })
       .pipe(tap((response) => this.session.set(response)));
   }
 

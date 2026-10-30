@@ -1,11 +1,12 @@
+<app-workspace-header section="workspaces" />
 <main class="page-shell">
   <header class="page-header">
     <div>
-      <p class="eyebrow">FLOWOPS · WORKSPACES</p>
-      <h1>Organizations</h1>
+      <p class="eyebrow">TEAM ACCESS & DELIVERY</p>
+      <h1>Workspaces</h1>
       <p class="subheading">Keep projects and access organized around your teams.</p>
     </div>
-    <a class="back-link" routerLink="/dashboard">Dashboard</a>
+    <span class="workspace-count-label">{{ organizations().length }} active {{ organizations().length === 1 ? 'workspace' : 'workspaces' }}</span>
   </header>
 
   @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }

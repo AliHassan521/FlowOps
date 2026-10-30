@@ -38,6 +38,18 @@ describe('AuthService', () => {
     expect(service.isAuthenticated).toBe(true);
   });
 
+  it('registers an account with credentials and stores the returned session', () => {
+    service.register({ fullName: 'Test Person', email: 'person@example.com', password: 'correct horse battery' }).subscribe();
+
+    const request = http.expectOne(`${API_BASE_URL}/auth/register`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(response);
+
+    expect(service.currentUser()?.userId).toBe('user-id');
+    expect(service.accessToken).toBe('access-token');
+  });
+
   it('shares concurrent refresh requests', () => {
     service.refresh().subscribe();
     service.refresh().subscribe();

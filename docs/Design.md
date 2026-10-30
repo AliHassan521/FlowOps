@@ -12,6 +12,30 @@ Design.md explains the important feature flows, rules, states, and implementatio
 
 ## 2. Authentication Design
 
+### Registration Flow
+
+```text
+User enters name, email, and password
+        |
+        v
+Angular validates identity fields, password length, and confirmation
+        |
+        v
+POST /api/auth/register
+        |
+        v
+API normalizes email, hashes password, assigns the default role,
+creates a refresh-token family, and returns the access-token session
+        |
+        v
+Angular keeps the access token in memory and routes to the dashboard
+```
+
+The registration screen follows the API's 12-1024 character password rule. Account
+creation immediately signs the user in; the refresh token is sent only through
+the HttpOnly cookie. The browser trims name and email whitespace before submit
+and requires the password confirmation to match.
+
 ### Login Flow
 
 ```text

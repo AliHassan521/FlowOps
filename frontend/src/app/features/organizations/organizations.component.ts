@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { WorkspaceHeaderComponent } from '../../shared/workspace-header.component';
 import { finalize } from 'rxjs';
 import { ORGANIZATION_ROLES, Organization, OrganizationMember, Project } from './organization.models';
 import { OrganizationService } from './organization.service';
@@ -10,7 +10,7 @@ import { OrganizationService } from './organization.service';
 @Component({
   selector: 'app-organizations',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, ReactiveFormsModule, WorkspaceHeaderComponent],
   templateUrl: './organizations.component.html',
   styleUrl: './organizations.component.css',
 })

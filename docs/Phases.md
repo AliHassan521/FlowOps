@@ -12,7 +12,7 @@ Do not jump ahead because another technology looks interesting.
 
 - **Current phase:** Phase 3 — Organizations, Projects & Membership
 - **Current task:** Complete the Phase 3 architecture and learning review before starting Phase 4.
-- **Verified so far:** Phase 2 implementation and security checks; Phase 3 SQL Server Express migrations; 29 backend integration tests; 17 Angular tests; clean Angular production build; production npm audit (0 vulnerabilities); .NET vulnerability audit (no vulnerable direct or transitive packages reported); successful NuGet restore using the repo audit-source configuration; live local SQL Server API smoke flow covering registration, organization creation, membership assignment, deactivation, and post-deactivation access revocation. The browser window review was interrupted because the selected Chrome window was minimized during user activity, so no browser visual check is claimed.
+- **Verified so far:** Phase 2 implementation and security checks; Phase 3 SQL Server Express migrations; 29 backend integration tests; 21 Angular tests; clean Angular production build; production npm audit (0 vulnerabilities); .NET vulnerability audit (no vulnerable direct or transitive packages reported); successful NuGet restore using the repo audit-source configuration; live local SQL Server API smoke flow covering registration, organization creation, membership assignment, deactivation, and post-deactivation access revocation. A visual browser review is still outstanding because the isolated browser could not reach the local Angular dev server.
 - **Learning status:** The Phase 2 authentication understanding check remains pending. Phase 3 technical checks pass, including append-only audit persistence; its multi-tenant understanding check is pending.
 - **Local run:** API at `http://localhost:5144` and Angular at `http://localhost:4200`, using the isolated `FlowOpsPhase3Validation` SQL Server Express database. No deployment has been performed.
 - **Next phase:** Phase 4 — Work Items & Workflow Engine, after the Phase 3 learning checkpoint.
@@ -151,6 +151,7 @@ Create a secure authentication foundation.
 - [x] User-role relationship
 - [x] Password hashing
 - [x] Login endpoint
+- [x] Angular registration page
 - [x] JWT generation
 - [x] Refresh-token strategy
 - [x] Authentication middleware/configuration

@@ -14,7 +14,7 @@ Phases 2 and 3 have working implementations; learning sign-off is pending:
 - Exact configured Origin checks on cookie-backed refresh and logout
 - Role-based authorization policies
 - Authentication rate limiting
-- Angular login, route guard, interceptor, refresh, and logout flow
+- Angular registration and login, route guard, interceptor, refresh, and logout flow
 - API integration tests for the authentication pipeline
 - Organization creation, listing, update, and soft deactivation
 - Tenant-specific organization memberships and roles
@@ -27,10 +27,11 @@ Phases 2 and 3 have working implementations; learning sign-off is pending:
 
 The automated API tests use SQLite in memory. SQL Server migrations were applied to
 the configured SQL Server Express database and to an isolated Phase 3 validation
-database. Integration coverage currently has 29 backend tests and 17 Angular tests.
+database. Integration coverage currently has 29 backend tests and 21 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
-vulnerabilities. A live SQL Server smoke flow verified registration, organization creation, membership assignment, deactivation, and access revocation. The local Angular app
-and API can be run using the steps below.
+vulnerabilities. A live SQL Server smoke flow verified registration, organization
+creation, membership assignment, deactivation, and access revocation. The local
+Angular app and API can be run using the steps below.
 
 This is not yet a complete or production-ready product. Work items and workflow,
 incidents, releases, SLAs, notifications, CI, containerized local development,

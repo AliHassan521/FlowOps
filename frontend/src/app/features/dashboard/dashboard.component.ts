@@ -1,23 +1,32 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '../../core/auth/auth.service';
+import { finalize } from 'rxjs';
+import { Organization, PagedResponse } from '../organizations/organization.models';
+import { OrganizationService } from '../organizations/organization.service';
+import { WorkspaceHeaderComponent } from '../../shared/workspace-header.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, WorkspaceHeaderComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
-export class DashboardComponent {
-  readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
+export class DashboardComponent implements OnInit {
+  private readonly organizationsApi = inject(OrganizationService);
+  readonly organizations = signal<Organization[]>([]);
+  readonly organizationCount = signal(0);
+  readonly loading = signal(true);
+  readonly errorMessage = signal('');
 
-  logout(): void {
-    this.authService.logout().subscribe({
-      next: () => this.router.navigate(['/login']),
-      error: () => this.router.navigate(['/login']),
+  ngOnInit(): void {
+    this.organizationsApi.list().pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (response: PagedResponse<Organization>) => {
+        this.organizations.set(response.items.slice(0, 4));
+        this.organizationCount.set(response.totalCount);
+      },
+      error: () => this.errorMessage.set('Your workspaces could not be loaded. Try again from the workspaces page.'),
     });
   }
+
 }

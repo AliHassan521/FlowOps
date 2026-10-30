@@ -1,16 +1,67 @@
-<main class="dashboard">
-  <header>
-    <div>
-      <p class="eyebrow">FLOWOPS OPERATIONS</p>
-      <h1>Welcome, {{ authService.currentUser()?.fullName }}</h1>
-      <p>Authentication is working. Your operational dashboard will grow from this protected shell.</p>
+<app-workspace-header section="overview" />
+<main class="dashboard-shell">
+  <section class="welcome-banner" aria-labelledby="welcome-title">
+    <div class="welcome-copy">
+      <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR OPERATIONS OVERVIEW</p>
+      <h1 id="welcome-title">A clearer view of your work.</h1>
+      <p>Keep your teams, projects, and engineering operations moving from one place.</p>
+      <a class="banner-button" routerLink="/organizations">Open workspaces <span aria-hidden="true">→</span></a>
     </div>
-    <button type="button" (click)="logout()">Sign out</button>
-  </header>
-  <section class="status-card">
-    <h2>Session active</h2>
-    <p>Role: {{ authService.currentUser()?.roles?.join(', ') }}</p>
-    <p>Access tokens stay in memory; refresh tokens are protected by an HttpOnly cookie.</p>
+    <div class="banner-art" aria-hidden="true">
+      <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+      <div class="orbit-center"><span>F</span></div>
+      <span class="orbit-node node-one">↗</span><span class="orbit-node node-two">◎</span><span class="orbit-node node-three">✓</span>
+    </div>
   </section>
-  <a class="workspace-link" routerLink="/organizations">Manage organizations <span aria-hidden="true">→</span></a>
+
+  @if (errorMessage()) { <p class="dashboard-alert" role="alert">{{ errorMessage() }}</p> }
+
+  <section class="overview-section" aria-labelledby="workspace-summary-title">
+    <div class="section-heading"><div><p class="eyebrow">AT A GLANCE</p><h2 id="workspace-summary-title">Your workspaces</h2></div><a routerLink="/organizations">View all <span aria-hidden="true">→</span></a></div>
+    <div class="summary-grid">
+      <article class="summary-card workspace-count-card">
+        <div class="summary-icon icon-indigo" aria-hidden="true">▦</div>
+        @if (loading()) { <span class="summary-value skeleton-value" aria-label="Loading workspace count"></span> } @else { <strong class="summary-value">{{ organizationCount() }}</strong> }
+        <span class="summary-label">Organizations</span><span class="summary-note">You have access to</span>
+      </article>
+      <article class="summary-card setup-card">
+        <div class="summary-icon icon-mint" aria-hidden="true">✳</div>
+        <strong class="summary-title">Build your team space</strong>
+        <span class="summary-note">Create a workspace, add teammates, and bring your projects together.</span>
+        <a class="text-link" routerLink="/organizations">Manage organizations <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="summary-card access-card">
+        <div class="summary-icon icon-amber" aria-hidden="true">⌁</div>
+        <strong class="summary-title">Access stays scoped</strong>
+        <span class="summary-note">Your role and permissions are managed separately for each organization.</span>
+        <span class="access-chip"><span class="access-dot"></span> Secure by design</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="workspace-section" aria-labelledby="recent-workspaces-title">
+    <div class="section-heading"><div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2 id="recent-workspaces-title">Recent workspaces</h2></div><a routerLink="/organizations">Manage workspaces <span aria-hidden="true">→</span></a></div>
+    @if (loading()) {
+      <div class="workspace-list" aria-label="Loading workspaces"><div class="workspace-skeleton"></div><div class="workspace-skeleton"></div></div>
+    } @else if (organizations().length > 0) {
+      <div class="workspace-list">
+        @for (organization of organizations(); track organization.id) {
+          <a class="workspace-row" routerLink="/organizations">
+            <span class="organization-mark">{{ organization.name.slice(0, 1).toUpperCase() }}</span>
+            <span class="workspace-row-copy"><strong>{{ organization.name }}</strong><small>{{ organization.slug }}</small></span>
+            <span class="workspace-role">{{ organization.currentUserRole }}</span>
+            <span class="workspace-open" aria-hidden="true">→</span>
+          </a>
+        }
+      </div>
+    } @else {
+      <div class="workspace-empty">
+        <div class="empty-symbol" aria-hidden="true">▦</div>
+        <div><strong>Your first workspace starts here</strong><p>Create an organization to bring a team and its projects together.</p></div>
+        <a class="empty-action" routerLink="/organizations">Create an organization <span aria-hidden="true">→</span></a>
+      </div>
+    }
+  </section>
+
+  <footer class="dashboard-footer"><span>FlowOps</span><span>Engineering operations, with more clarity.</span></footer>
 </main>
