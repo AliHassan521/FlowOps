@@ -29,8 +29,7 @@ The automated API tests use SQLite in memory. SQL Server migrations were applied
 the configured SQL Server Express database and to an isolated Phase 3 validation
 database. Integration coverage currently has 29 backend tests and 17 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
-vulnerabilities. A live SQL Server smoke flow verified registration, organization
-creation, project creation, listing, and authenticated reads. The local Angular app
+vulnerabilities. A live SQL Server smoke flow verified registration, organization creation, membership assignment, deactivation, and access revocation. The local Angular app
 and API can be run using the steps below.
 
 This is not yet a complete or production-ready product. Work items and workflow,
