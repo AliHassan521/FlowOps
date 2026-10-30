@@ -201,6 +201,12 @@ All protected API requests must go through the normal Angular authentication mec
 
 Authorization must be enforced on the server even if the UI hides unavailable controls.
 
+Access tokens are short-lived JWTs. Refresh tokens are cryptographically random opaque values
+stored only as SHA-256 hashes in SQL Server and delivered through an HttpOnly cookie. Refresh
+tokens rotate on every use and are revoked on logout.
+Refresh and logout requests require an Origin matching the configured frontend
+origin to prevent cross-origin use of the cookie-backed session.
+
 ---
 
 ## 6. Multi-Tenant Boundary

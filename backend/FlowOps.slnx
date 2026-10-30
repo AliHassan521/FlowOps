@@ -6,4 +6,7 @@
     <Project Path="src/FlowOps.Domain/FlowOps.Domain.csproj" />
     <Project Path="src/FlowOps.Infrastructure/FlowOps.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FlowOps.Application.Tests/FlowOps.Application.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -8,6 +8,13 @@ Always work on the **current phase only** unless a critical dependency requires 
 
 Do not jump ahead because another technology looks interesting.
 
+## Current execution status
+
+- **Current phase:** Phase 2 — Authentication & Authorization
+- **Current task:** Complete the authentication understanding check.
+- **Verified so far:** Release backend build; 24 backend tests; all five migrations applied to a fresh SQL Server LocalDB database with schema and role seed verified; live API health, registration, protected profile, refresh rotation/replay revocation, and logout smoke checks pass against that database; frontend build; 6 frontend tests; npm audit; and NuGet vulnerability scan pass.
+- **Next phase:** Phase 3 — Organizations, Projects & Membership, after Phase 2 acceptance and the authentication understanding check are complete.
+
 ---
 
 # 2. Phase System
@@ -85,17 +92,17 @@ Establish the backend structure and database foundation without implementing the
 
 ## Tasks
 
-- [ ] Define solution/project boundaries
-- [ ] Configure dependency injection
-- [ ] Configure application settings
-- [ ] Configure EF Core
-- [ ] Configure database connection
-- [ ] Create initial database
-- [ ] Create core organization/user-related tables
-- [ ] Configure migrations
-- [ ] Configure Swagger/OpenAPI
-- [ ] Add global error handling
-- [ ] Add basic health endpoint
+- [x] Define solution/project boundaries
+- [x] Configure dependency injection
+- [x] Configure application settings
+- [x] Configure EF Core
+- [x] Configure database connection
+- [x] Create initial database
+- [ ] Create core organization/user-related tables (Phase 2)
+- [x] Configure migrations
+- [x] Configure Swagger/OpenAPI
+- [x] Add global error handling
+- [x] Add basic health endpoint
 
 ## Acceptance Criteria
 
@@ -137,20 +144,21 @@ Create a secure authentication foundation.
 
 ## Tasks
 
-- [ ] Users table
-- [ ] Roles table
-- [ ] User-role relationship
-- [ ] Password hashing
-- [ ] Login endpoint
-- [ ] JWT generation
-- [ ] Refresh-token strategy
-- [ ] Authentication middleware/configuration
-- [ ] Authorization policies
-- [ ] Angular login page
-- [ ] Angular auth service
-- [ ] HTTP interceptor
-- [ ] Route guard
-- [ ] Logout/session handling
+- [x] Users table
+- [x] Roles table
+- [x] User-role relationship
+- [x] Password hashing
+- [x] Login endpoint
+- [x] JWT generation
+- [x] Refresh-token strategy
+- [x] Authentication middleware/configuration
+- [x] Authorization policies
+- [x] Angular login page
+- [x] Angular auth service
+- [x] HTTP interceptor
+- [x] Route guard
+- [x] Logout/session handling
+- [x] API integration coverage for authentication, authorization, CORS, rate limiting, refresh, and logout
 
 ## Acceptance Criteria
 
@@ -158,7 +166,9 @@ Create a secure authentication foundation.
 - Invalid credentials are rejected.
 - Protected APIs reject unauthenticated access.
 - Authorized roles can access permitted operations.
-- Organization boundaries are enforced.
+- Refresh tokens are stored as hashes, rotate once, and replay revokes only their login family.
+- Cookie-backed refresh and logout reject absent or untrusted browser origins.
+- Organization boundaries will be enforced when organizations and memberships are introduced in Phase 3.
 
 ## Understanding Check
 

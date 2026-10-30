@@ -54,6 +54,11 @@ Return authentication response
 - Protected APIs must validate the token.
 - Authorization must be checked independently from authentication.
 - Expired/invalid tokens must not grant access.
+- Refresh tokens are never returned in the JSON response or stored in plaintext.
+- A refresh token is single-use: refresh rotates it and invalidates the previous token.
+- Logout revokes the refresh token and clears the HttpOnly cookie.
+- Refresh and logout reject requests without a trusted configured browser Origin.
+- Reuse of a rotated token revokes active tokens in that login family, while other device sessions remain valid.
 
 ---
 
