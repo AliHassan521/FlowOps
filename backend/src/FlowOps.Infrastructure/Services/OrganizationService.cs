@@ -235,7 +235,16 @@ public sealed class OrganizationService(FlowOpsDbContext dbContext) : IOrganizat
 
         AddAuditEvent(organizationId, actorUserId, "Membership.Added", "User", user.Id,
             JsonSerializer.Serialize(new { role = role.Name }));
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception)
+            && exception.Entries.Any(entry => entry.Entity is OrganizationMembership))
+        {
+            throw new ConflictException("This user is already a member of the organization.");
+        }
+
         return MapMember(user, role, existingMembership);
     }
 
