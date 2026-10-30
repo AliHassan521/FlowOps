@@ -17,6 +17,14 @@ export class OrganizationService {
     return this.http.post<Organization>(this.endpoint, input);
   }
 
+  update(organizationId: string, input: { name: string; description: string | null }): Observable<Organization> {
+    return this.http.put<Organization>(`${this.endpoint}/${organizationId}`, input);
+  }
+
+  deactivate(organizationId: string): Observable<void> {
+    return this.http.delete<void>(`${this.endpoint}/${organizationId}`);
+  }
+
   members(organizationId: string): Observable<PagedResponse<OrganizationMember>> {
     return this.http.get<PagedResponse<OrganizationMember>>(`${this.endpoint}/${organizationId}/members`);
   }

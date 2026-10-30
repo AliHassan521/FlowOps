@@ -50,10 +50,28 @@
 
     <section class="panel details-panel" aria-labelledby="members-heading">
       @if (selectedOrganization(); as organization) {
-        <div class="panel-heading details-heading">
-          <div><p class="eyebrow">{{ organization.slug }}</p><h2 id="members-heading">{{ organization.name }} members</h2><p class="muted">{{ organization.description || 'No description provided.' }}</p></div>
-          <span class="role-pill">{{ organization.currentUserRole }}</span>
-        </div>
+        @if (editingOrganization()) {
+          <form class="organization-edit-form" [formGroup]="organizationEditForm" (ngSubmit)="saveOrganization()">
+            <div><p class="eyebrow">{{ organization.slug }}</p><h2>Edit organization</h2></div>
+            <label for="edit-org-name">Organization name</label>
+            <input id="edit-org-name" formControlName="name" />
+            @if (organizationEditForm.controls.name.touched && organizationEditForm.controls.name.invalid) { <small class="field-error">Enter a name between 2 and 120 characters.</small> }
+            <label for="edit-org-description">Description <span class="muted">Optional</span></label>
+            <textarea id="edit-org-description" formControlName="description" rows="2" maxlength="500"></textarea>
+            <div class="form-actions"><button class="primary-button" type="submit" [disabled]="savingOrganization() || organizationEditForm.invalid">{{ savingOrganization() ? 'Saving…' : 'Save changes' }}</button><button class="secondary-button" type="button" (click)="cancelEditingOrganization()">Cancel</button></div>
+          </form>
+        } @else {
+          <div class="panel-heading details-heading">
+            <div><p class="eyebrow">{{ organization.slug }}</p><h2 id="members-heading">{{ organization.name }} members</h2><p class="muted">{{ organization.description || 'No description provided.' }}</p></div>
+            <div class="heading-actions"><span class="role-pill">{{ organization.currentUserRole }}</span>@if (canManage) { <button class="secondary-button compact-button" type="button" (click)="startEditingOrganization()">Edit</button><button class="text-button" type="button" (click)="requestOrganizationDeactivation()">Deactivate</button> }</div>
+          </div>
+        }
+        @if (confirmOrganizationDeactivation()) {
+          <div class="confirm-panel" role="alert">
+            <div><strong>Deactivate {{ organization.name }}?</strong><p>Members will lose access. The organization and its audit history remain stored.</p></div>
+            <div class="form-actions"><button class="danger-button" type="button" (click)="deactivateOrganization()" [disabled]="savingOrganization()">{{ savingOrganization() ? 'Deactivating…' : 'Confirm deactivation' }}</button><button class="secondary-button" type="button" (click)="cancelOrganizationDeactivation()">Keep organization</button></div>
+          </div>
+        }
 
         @if (canManage) {
           <form class="invite-form" [formGroup]="memberForm" (ngSubmit)="addMember()">
@@ -73,7 +91,7 @@
                   <td><strong>{{ member.fullName }}</strong><small>{{ member.email }}</small></td>
                   <td>@if (canManage && member.isActive) { <select class="inline-select" [value]="member.role" [attr.aria-label]="'Role for ' + member.fullName" (change)="changeRole(member, $event)">@for (role of roles; track role) { <option [value]="role">{{ role }}</option> }</select> } @else { <span class="role-pill">{{ member.role }}</span> }</td>
                   <td><span class="status" [class.inactive]="!member.isActive">{{ member.isActive ? 'Active' : 'Inactive' }}</span></td>
-                  @if (canManage) { <td>@if (member.isActive) { <button type="button" class="text-button" (click)="deactivateMember(member)" [disabled]="isLastActiveAdmin(member)">Remove</button> }</td> }
+                  @if (canManage) { <td>@if (member.isActive) { @if (pendingMemberDeactivation()?.userId === member.userId) { <span class="inline-confirm"><button type="button" class="text-button" (click)="deactivateMember(member)" [disabled]="isLastActiveAdmin(member)">Confirm</button><button type="button" class="quiet-button" (click)="cancelMemberDeactivation()">Cancel</button></span> } @else { <button type="button" class="text-button" (click)="deactivateMember(member)" [disabled]="isLastActiveAdmin(member)">Remove</button> } }</td> }
                 </tr>
               } @empty { <tr><td class="empty-row" [attr.colspan]="canManage ? 4 : 3">No members found.</td></tr> }
             </tbody>
@@ -94,14 +112,24 @@
             <article class="project-card">
               <div class="project-key">{{ project.key }}</div>
               <button type="button" class="project-copy project-link" (click)="viewProject(project)"><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p></button>
-              @if (canManage) { <button type="button" class="text-button" (click)="deactivateProject(project)">Archive</button> }
+              @if (canManage && pendingProjectDeactivation()?.id === project.id) { <span class="inline-confirm"><button type="button" class="text-button" (click)="deactivateProject(project)">Confirm</button><button type="button" class="quiet-button" (click)="cancelProjectDeactivation()">Cancel</button></span> } @else if (canManage) { <button type="button" class="text-button" (click)="deactivateProject(project)">Archive</button> }
             </article>
           } @empty { <p class="empty-state">No active projects yet.</p> }
         </div>
         @if (selectedProject(); as project) {
           <section class="project-details" aria-label="Project details">
-            <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p></div>
-            <small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small>
+            @if (editingProject()) {
+              <form class="project-edit-form" [formGroup]="projectEditForm" (ngSubmit)="saveProject()">
+                <p class="eyebrow">{{ project.key }} · EDIT PROJECT</p>
+                <label for="edit-project-name">Project name</label><input id="edit-project-name" formControlName="name" />
+                @if (projectEditForm.controls.name.touched && projectEditForm.controls.name.invalid) { <small class="field-error">Enter a name between 2 and 120 characters.</small> }
+                <label for="edit-project-description">Description <span class="muted">Optional</span></label><textarea id="edit-project-description" formControlName="description" rows="2" maxlength="1000"></textarea>
+                <div class="form-actions"><button class="primary-button" type="submit" [disabled]="savingProjectEdit() || projectEditForm.invalid">{{ savingProjectEdit() ? 'Saving…' : 'Save project' }}</button><button class="secondary-button" type="button" (click)="cancelEditingProject()">Cancel</button></div>
+              </form>
+            } @else {
+              <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p><small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small></div>
+              @if (canManageProjects) { <div class="form-actions"><button type="button" class="secondary-button" (click)="startEditingProject()">Edit project</button>@if (canManage) { <button type="button" class="danger-button" (click)="deactivateProject(project)">Archive</button> }</div> }
+            }
           </section>
         }
       } @else {

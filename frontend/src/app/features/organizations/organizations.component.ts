@@ -4,7 +4,6 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
 import { ORGANIZATION_ROLES, Organization, OrganizationMember, Project } from './organization.models';
 import { OrganizationService } from './organization.service';
 
@@ -18,15 +17,21 @@ import { OrganizationService } from './organization.service';
 export class OrganizationsComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly organizationsApi = inject(OrganizationService);
-  readonly authService = inject(AuthService);
   readonly organizations = signal<Organization[]>([]);
   readonly members = signal<OrganizationMember[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly selectedProject = signal<Project | null>(null);
+  readonly editingOrganization = signal(false);
+  readonly confirmOrganizationDeactivation = signal(false);
+  readonly editingProject = signal(false);
+  readonly pendingProjectDeactivation = signal<Project | null>(null);
+  readonly pendingMemberDeactivation = signal<OrganizationMember | null>(null);
   readonly selectedOrganization = signal<Organization | null>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly savingProject = signal(false);
+  readonly savingOrganization = signal(false);
+  readonly savingProjectEdit = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
   readonly roles = ORGANIZATION_ROLES;
@@ -36,6 +41,10 @@ export class OrganizationsComponent implements OnInit {
     slug: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(80), Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
     description: ['', Validators.maxLength(500)],
   });
+  readonly organizationEditForm = this.formBuilder.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    description: ['', Validators.maxLength(500)],
+  });
   readonly memberForm = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email, Validators.maxLength(256)]],
     role: ['Engineer', Validators.required],
@@ -43,6 +52,10 @@ export class OrganizationsComponent implements OnInit {
   readonly projectForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     key: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(10), Validators.pattern(/^[A-Z][A-Z0-9]*$/)]],
+    description: ['', Validators.maxLength(1000)],
+  });
+  readonly projectEditForm = this.formBuilder.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     description: ['', Validators.maxLength(1000)],
   });
 
@@ -74,6 +87,11 @@ export class OrganizationsComponent implements OnInit {
 
   selectOrganization(organization: Organization | null): void {
     this.selectedOrganization.set(organization);
+    this.editingOrganization.set(false);
+    this.confirmOrganizationDeactivation.set(false);
+    this.editingProject.set(false);
+    this.pendingProjectDeactivation.set(null);
+    this.pendingMemberDeactivation.set(null);
     this.members.set([]);
     this.projects.set([]);
     this.selectedProject.set(null);
@@ -109,6 +127,67 @@ export class OrganizationsComponent implements OnInit {
         this.notice.set('Organization created. You are its administrator.');
       },
       error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Organization could not be created.')),
+    });
+  }
+
+  startEditingOrganization(): void {
+    const organization = this.selectedOrganization();
+    if (!organization || !this.canManage) return;
+    this.organizationEditForm.reset({ name: organization.name, description: organization.description ?? '' });
+    this.editingOrganization.set(true);
+    this.confirmOrganizationDeactivation.set(false);
+    this.error.set('');
+  }
+
+  cancelEditingOrganization(): void {
+    this.editingOrganization.set(false);
+  }
+
+  saveOrganization(): void {
+    const organization = this.selectedOrganization();
+    this.organizationEditForm.markAllAsTouched();
+    if (!organization || !this.canManage || this.organizationEditForm.invalid || this.savingOrganization()) return;
+    const value = this.organizationEditForm.getRawValue();
+    this.savingOrganization.set(true);
+    this.error.set('');
+    this.organizationsApi.update(organization.id, {
+      name: value.name.trim(), description: value.description.trim() || null,
+    }).pipe(finalize(() => this.savingOrganization.set(false))).subscribe({
+      next: (updated) => {
+        if (this.selectedOrganization()?.id === organization.id) this.selectedOrganization.set(updated);
+        this.organizations.set(this.organizations().map((item) => item.id === updated.id ? updated : item)
+          .sort((a, b) => a.name.localeCompare(b.name)));
+        this.editingOrganization.set(false);
+        this.notice.set('Organization details were updated.');
+      },
+      error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Organization could not be updated.')),
+    });
+  }
+
+  requestOrganizationDeactivation(): void {
+    if (!this.canManage) return;
+    this.confirmOrganizationDeactivation.set(true);
+    this.editingOrganization.set(false);
+    this.error.set('');
+  }
+
+  cancelOrganizationDeactivation(): void {
+    this.confirmOrganizationDeactivation.set(false);
+  }
+
+  deactivateOrganization(): void {
+    const organization = this.selectedOrganization();
+    if (!organization || !this.canManage || !this.confirmOrganizationDeactivation()) return;
+    this.savingOrganization.set(true);
+    this.error.set('');
+    this.organizationsApi.deactivate(organization.id).pipe(finalize(() => this.savingOrganization.set(false))).subscribe({
+      next: () => {
+        const remaining = this.organizations().filter((item) => item.id !== organization.id);
+        this.organizations.set(remaining);
+        this.selectOrganization(remaining[0] ?? null);
+        this.notice.set(`${organization.name} was deactivated. Its data remains in the system.`);
+      },
+      error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Organization could not be deactivated.')),
     });
   }
 
@@ -155,11 +234,17 @@ export class OrganizationsComponent implements OnInit {
 
   deactivateMember(member: OrganizationMember): void {
     const organization = this.selectedOrganization();
-    if (!organization || !this.canManage || !member.isActive) return;
+    if (!organization || !this.canManage || !member.isActive || this.isLastActiveAdmin(member)) return;
+
+    if (this.pendingMemberDeactivation()?.userId !== member.userId) {
+      this.pendingMemberDeactivation.set(member);
+      return;
+    }
 
     this.error.set('');
     this.organizationsApi.deactivateMember(organization.id, member).subscribe({
       next: () => {
+        this.pendingMemberDeactivation.set(null);
         if (this.selectedOrganization()?.id === organization.id) {
           this.members.set(this.members().map((item) => item.userId === member.userId ? { ...item, isActive: false } : item));
         }
@@ -167,6 +252,10 @@ export class OrganizationsComponent implements OnInit {
       },
       error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Member could not be deactivated.')),
     });
+  }
+
+  cancelMemberDeactivation(): void {
+    this.pendingMemberDeactivation.set(null);
   }
 
   createProject(): void {
@@ -195,8 +284,16 @@ export class OrganizationsComponent implements OnInit {
     const organization = this.selectedOrganization();
     if (!organization || !this.canManage || !project.isActive) return;
 
+    if (this.pendingProjectDeactivation()?.id !== project.id) {
+      this.pendingProjectDeactivation.set(project);
+      this.error.set('');
+      return;
+    }
+
     this.organizationsApi.deactivateProject(organization.id, project).subscribe({
       next: () => {
+        this.pendingProjectDeactivation.set(null);
+        this.selectedProject.set(this.selectedProject()?.id === project.id ? null : this.selectedProject());
         if (this.selectedOrganization()?.id === organization.id) {
           this.projects.set(this.projects().filter((item) => item.id !== project.id));
         }
@@ -204,6 +301,10 @@ export class OrganizationsComponent implements OnInit {
       },
       error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Project could not be archived.')),
     });
+  }
+
+  cancelProjectDeactivation(): void {
+    this.pendingProjectDeactivation.set(null);
   }
 
   viewProject(project: Project): void {
@@ -214,6 +315,42 @@ export class OrganizationsComponent implements OnInit {
         if (this.selectedOrganization()?.id === organization.id) this.selectedProject.set(details);
       },
       error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Project details could not be loaded.')),
+    });
+  }
+
+  startEditingProject(): void {
+    const project = this.selectedProject();
+    if (!project || !this.canManageProjects) return;
+    this.projectEditForm.reset({ name: project.name, description: project.description ?? '' });
+    this.editingProject.set(true);
+    this.error.set('');
+  }
+
+  cancelEditingProject(): void {
+    this.editingProject.set(false);
+  }
+
+  saveProject(): void {
+    const organization = this.selectedOrganization();
+    const project = this.selectedProject();
+    this.projectEditForm.markAllAsTouched();
+    if (!organization || !project || !this.canManageProjects || this.projectEditForm.invalid || this.savingProjectEdit()) return;
+    const value = this.projectEditForm.getRawValue();
+    this.savingProjectEdit.set(true);
+    this.error.set('');
+    this.organizationsApi.updateProject(organization.id, project, {
+      name: value.name.trim(), description: value.description.trim() || null,
+    }).pipe(finalize(() => this.savingProjectEdit.set(false))).subscribe({
+      next: (updated) => {
+        if (this.selectedOrganization()?.id === organization.id) {
+          this.selectedProject.set(updated);
+          this.projects.set(this.projects().map((item) => item.id === updated.id ? updated : item)
+            .sort((a, b) => a.name.localeCompare(b.name)));
+        }
+        this.editingProject.set(false);
+        this.notice.set(`${updated.key} was updated.`);
+      },
+      error: (response: HttpErrorResponse) => this.error.set(this.describeError(response, 'Project could not be updated.')),
     });
   }
 
