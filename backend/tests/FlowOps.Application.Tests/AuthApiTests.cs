@@ -5,6 +5,8 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using FlowOps.Contracts.Auth;
+using FlowOps.Contracts.Organizations;
+using FlowOps.Contracts.Projects;
 using FlowOps.Domain.Entities;
 using FlowOps.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -216,6 +218,147 @@ public sealed class AuthApiTests : IDisposable
         blockedRequest.Headers.Add("Access-Control-Request-Method", "POST");
         using var blockedResponse = await _client.SendAsync(blockedRequest);
         Assert.False(blockedResponse.Headers.Contains("Access-Control-Allow-Origin"));
+    }
+
+    [Fact]
+    public async Task Organization_creator_is_admin_and_membership_is_tenant_scoped_and_audited()
+    {
+        var admin = await RegisterAndAuthorizeAsync("org-admin@example.com");
+        using var create = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Platform Team", "platform-team", "Delivery group"));
+        Assert.True(create.StatusCode == HttpStatusCode.Created,
+            $"Expected organization creation, got {(int)create.StatusCode}: {await create.Content.ReadAsStringAsync()}");
+        var organization = await create.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+        Assert.Equal("Admin", organization.CurrentUserRole);
+
+        using var duplicate = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Another Team", "platform-team", null));
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+
+        var member = await RegisterAndAuthorizeAsync("engineer@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addMember = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("ENGINEER@example.com", "Engineer"));
+        Assert.Equal(HttpStatusCode.OK, addMember.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", member.AccessToken);
+        using var getOrganization = await _client.GetAsync($"/api/organizations/{organization.Id}");
+        Assert.Equal(HttpStatusCode.OK, getOrganization.StatusCode);
+        var memberOrganization = await getOrganization.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(memberOrganization);
+        Assert.Equal("Engineer", memberOrganization.CurrentUserRole);
+
+        using var forbiddenUpdate = await _client.PutAsJsonAsync($"/api/organizations/{organization.Id}",
+            new UpdateOrganizationRequest("Stolen", null));
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenUpdate.StatusCode);
+
+        using var secondOrganizationCreate = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Engineering", "engineering", null));
+        Assert.Equal(HttpStatusCode.Created, secondOrganizationCreate.StatusCode);
+        var secondOrganization = await secondOrganizationCreate.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(secondOrganization);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var crossTenant = await _client.GetAsync($"/api/organizations/{secondOrganization.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+        Assert.Equal(2, await dbContext.AuditEvents.CountAsync(auditEvent => auditEvent.OrganizationId == organization.Id));
+    }
+
+    [Fact]
+    public async Task Organization_must_retain_an_active_admin_and_invalid_paging_is_rejected()
+    {
+        var admin = await RegisterAndAuthorizeAsync("sole-admin@example.com");
+        using var create = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Solo Team", "solo-team", null));
+        var organization = await create.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+
+        using var selfDeactivate = await _client.DeleteAsync($"/api/organizations/{organization.Id}/members/{admin.UserId}");
+        Assert.True(selfDeactivate.StatusCode == HttpStatusCode.Conflict,
+            $"Expected last-admin conflict, got {(int)selfDeactivate.StatusCode}: {await selfDeactivate.Content.ReadAsStringAsync()}");
+
+        using var selfDemote = await _client.PutAsJsonAsync($"/api/organizations/{organization.Id}/members/{admin.UserId}/role",
+            new UpdateOrganizationMemberRoleRequest("Engineer"));
+        Assert.Equal(HttpStatusCode.Conflict, selfDemote.StatusCode);
+
+        using var badPage = await _client.GetAsync("/api/organizations?page=0&pageSize=500");
+        Assert.Equal(HttpStatusCode.BadRequest, badPage.StatusCode);
+    }
+
+    [Fact]
+    public async Task Projects_enforce_organization_scope_and_role_rules_and_audit_changes()
+    {
+        var admin = await RegisterAndAuthorizeAsync("project-admin@example.com");
+        using var organizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Product Group", "product-group", null));
+        var organization = await organizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+
+        var teamLead = await RegisterAndAuthorizeAsync("lead@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addLead = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("lead@example.com", "TeamLead"));
+        Assert.Equal(HttpStatusCode.OK, addLead.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", teamLead.AccessToken);
+        var projectPath = $"/api/organizations/{organization.Id}/projects";
+        using var createProject = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Reliability", "REL", "Reliability work"));
+        Assert.Equal(HttpStatusCode.Created, createProject.StatusCode);
+        var project = await createProject.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(project);
+
+        using var duplicateKey = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Other Project", "REL", null));
+        Assert.Equal(HttpStatusCode.Conflict, duplicateKey.StatusCode);
+
+        var engineer = await RegisterAndAuthorizeAsync("project-engineer@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addEngineer = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("project-engineer@example.com", "Engineer"));
+        Assert.Equal(HttpStatusCode.OK, addEngineer.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", engineer.AccessToken);
+        using var deniedCreate = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Restricted", "NOPE", null));
+        Assert.Equal(HttpStatusCode.Forbidden, deniedCreate.StatusCode);
+        using var allowedList = await _client.GetAsync(projectPath);
+        Assert.Equal(HttpStatusCode.OK, allowedList.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var otherOrganizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Other Product", "other-product", null));
+        var otherOrganization = await otherOrganizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(otherOrganization);
+        var otherProjectPath = $"/api/organizations/{otherOrganization.Id}/projects";
+        using var sameKeyDifferentOrganization = await _client.PostAsJsonAsync(otherProjectPath,
+            new CreateProjectRequest("Different Reliability", "REL", null));
+        Assert.Equal(HttpStatusCode.Created, sameKeyDifferentOrganization.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", engineer.AccessToken);
+        using var crossTenant = await _client.GetAsync($"{otherProjectPath}/{project.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var deactivate = await _client.DeleteAsync($"{projectPath}/{project.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deactivate.StatusCode);
+        using var hiddenProject = await _client.GetAsync($"{projectPath}/{project.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, hiddenProject.StatusCode);
+    }
+
+    private async Task<AuthResponse> RegisterAndAuthorizeAsync(string email)
+    {
+        using var registration = await _client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(email, "Test User", "correct horse battery"));
+        Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
+        var auth = await registration.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.NotNull(auth);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
+        return auth;
     }
 
     private async Task<HttpResponseMessage> PostWithCookieAsync(string path, string cookie, string? origin = "https://localhost")

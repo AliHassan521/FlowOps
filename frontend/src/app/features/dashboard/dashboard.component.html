@@ -12,4 +12,5 @@
     <p>Role: {{ authService.currentUser()?.roles?.join(', ') }}</p>
     <p>Access tokens stay in memory; refresh tokens are protected by an HttpOnly cookie.</p>
   </section>
+  <a class="workspace-link" routerLink="/organizations">Manage organizations <span aria-hidden="true">→</span></a>
 </main>

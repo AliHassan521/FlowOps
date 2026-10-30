@@ -7,3 +7,4 @@ header p { color: #60708a; }
 button { padding: .7rem 1rem; border: 1px solid #b8c5d8; border-radius: .5rem; background: white; cursor: pointer; }
 .status-card { max-width: 42rem; margin-top: 3rem; padding: 1.5rem; border-radius: 1rem; background: white; box-shadow: 0 .75rem 2rem rgb(30 55 90 / 8%); }
 .status-card p { color: #60708a; line-height: 1.5; }
+.workspace-link { display: inline-flex; gap: .65rem; align-items: center; margin-top: 1.25rem; padding: .8rem 1rem; border-radius: .65rem; background: #315fca; color: white; font-weight: 700; text-decoration: none; }

@@ -10,10 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 2 — Authentication & Authorization
-- **Current task:** Complete the authentication understanding check.
-- **Verified so far:** Release backend build; 24 backend tests; all five migrations applied to the configured SQL Server Express database and to a fresh LocalDB validation database; existing password hashes and refresh-token rotation families preserved; live API health, registration, protected profile, refresh rotation/replay revocation, and logout smoke checks pass against the validation database; frontend build; 6 frontend tests; npm audit; and NuGet vulnerability scan pass.
-- **Next phase:** Phase 3 — Organizations, Projects & Membership, after Phase 2 acceptance and the authentication understanding check are complete.
+- **Current phase:** Phase 3 — Organizations, Projects & Membership
+- **Current task:** Complete the Phase 3 architecture and learning review before starting Phase 4.
+- **Verified so far:** Phase 2 implementation and security checks; Phase 3 SQL Server Express migrations; 27 backend integration tests; 9 Angular tests; clean Angular production build; production npm audit (0 vulnerabilities); live local SQL Server API smoke flow covering registration, organization creation, and project creation/listing. The browser window review was interrupted because the selected Chrome window was minimized during user activity, so no browser visual check is claimed.
+- **Learning status:** The Phase 2 authentication understanding check remains pending. Phase 3 technical checks pass; its multi-tenant understanding check is pending.
+- **Local run:** API at `http://localhost:5144` and Angular at `http://localhost:4200`, using the isolated `FlowOpsPhase3Validation` SQL Server Express database. No deployment has been performed.
+- **Next phase:** Phase 4 — Work Items & Workflow Engine, after the Phase 3 learning checkpoint.
 
 ---
 
@@ -204,15 +206,15 @@ Build the main organization/project structure.
 
 ## Tasks
 
-- [ ] Organization CRUD
-- [ ] Project creation
-- [ ] Project listing
-- [ ] Project details
-- [ ] Membership
-- [ ] Role-aware project access
-- [ ] Angular project pages
-- [ ] Validation
-- [ ] Audit important actions
+- [x] Organization CRUD
+- [x] Project creation
+- [x] Project listing
+- [x] Project details
+- [x] Membership
+- [x] Role-aware project access
+- [x] Angular project pages
+- [x] Validation
+- [x] Audit important actions
 
 ## Acceptance Criteria
 

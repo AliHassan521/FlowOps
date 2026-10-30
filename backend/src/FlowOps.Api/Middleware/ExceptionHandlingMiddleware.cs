@@ -35,6 +35,7 @@ public sealed class ExceptionHandlingMiddleware
             var statusCode = ex switch
             {
                 ConflictException         => HttpStatusCode.Conflict,
+                ForbiddenException        => HttpStatusCode.Forbidden,
                 ArgumentNullException      => HttpStatusCode.BadRequest,
                 ArgumentException          => HttpStatusCode.BadRequest,
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,

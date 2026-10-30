@@ -1,0 +1,112 @@
+<main class="page-shell">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">FLOWOPS · WORKSPACES</p>
+      <h1>Organizations</h1>
+      <p class="subheading">Keep projects and access organized around your teams.</p>
+    </div>
+    <a class="back-link" routerLink="/dashboard">Dashboard</a>
+  </header>
+
+  @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
+  @if (notice()) { <p class="notice success" role="status">{{ notice() }}</p> }
+
+  <div class="workspace-grid">
+    <section class="panel organization-panel" aria-labelledby="organizations-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">YOUR WORKSPACES</p><h2 id="organizations-heading">Organizations</h2></div>
+        <span class="count">{{ organizations().length }}</span>
+      </div>
+
+      @if (loading()) { <p class="muted">Loading organizations…</p> }
+      @else if (organizations().length === 0) { <p class="empty-state">Create your first organization to invite teammates and start a project.</p> }
+      @else {
+        <ul class="organization-list">
+          @for (organization of organizations(); track organization.id) {
+            <li>
+              <button type="button" class="organization-option" [class.selected]="selectedOrganization()?.id === organization.id" (click)="selectOrganization(organization)">
+                <span class="organization-mark">{{ organization.name.slice(0, 1).toUpperCase() }}</span>
+                <span class="organization-copy"><strong>{{ organization.name }}</strong><small>{{ organization.slug }} · {{ organization.currentUserRole }}</small></span>
+                <span class="chevron" aria-hidden="true">›</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      <form class="create-form" [formGroup]="organizationForm" (ngSubmit)="createOrganization()">
+        <h3>Create organization</h3>
+        <label for="org-name">Name</label>
+        <input id="org-name" formControlName="name" autocomplete="organization" placeholder="Platform team" />
+        @if (organizationForm.controls.name.touched && organizationForm.controls.name.invalid) { <small class="field-error">Enter a name between 2 and 120 characters.</small> }
+        <label for="org-slug">URL slug</label>
+        <input id="org-slug" formControlName="slug" autocomplete="off" placeholder="platform-team" />
+        @if (organizationForm.controls.slug.touched && organizationForm.controls.slug.invalid) { <small class="field-error">Use lowercase letters, numbers, and single hyphens.</small> }
+        <label for="org-description">Description <span class="muted">Optional</span></label>
+        <textarea id="org-description" rows="2" formControlName="description" maxlength="500" placeholder="What does this team own?"></textarea>
+        <button class="primary-button" type="submit" [disabled]="saving() || organizationForm.invalid">{{ saving() ? 'Creating…' : 'Create organization' }}</button>
+      </form>
+    </section>
+
+    <section class="panel details-panel" aria-labelledby="members-heading">
+      @if (selectedOrganization(); as organization) {
+        <div class="panel-heading details-heading">
+          <div><p class="eyebrow">{{ organization.slug }}</p><h2 id="members-heading">{{ organization.name }} members</h2><p class="muted">{{ organization.description || 'No description provided.' }}</p></div>
+          <span class="role-pill">{{ organization.currentUserRole }}</span>
+        </div>
+
+        @if (canManage) {
+          <form class="invite-form" [formGroup]="memberForm" (ngSubmit)="addMember()">
+            <div class="field grow"><label for="member-email">Invite an existing FlowOps user</label><input id="member-email" type="email" formControlName="email" autocomplete="email" placeholder="teammate@example.com" /></div>
+            <div class="field role-field"><label for="member-role">Organization role</label><select id="member-role" formControlName="role">@for (role of roles; track role) { <option [value]="role">{{ role }}</option> }</select></div>
+            <button class="primary-button" type="submit" [disabled]="saving() || memberForm.invalid">Add member</button>
+          </form>
+          <p class="helper-text">Teammates need an account before you can add them. Their role applies only to this organization.</p>
+        }
+
+        <div class="member-table-wrap">
+          <table>
+            <thead><tr><th scope="col">Member</th><th scope="col">Role</th><th scope="col">Status</th>@if (canManage) { <th scope="col"><span class="sr-only">Actions</span></th> }</tr></thead>
+            <tbody>
+              @for (member of members(); track member.userId) {
+                <tr>
+                  <td><strong>{{ member.fullName }}</strong><small>{{ member.email }}</small></td>
+                  <td>@if (canManage && member.isActive) { <select class="inline-select" [value]="member.role" [attr.aria-label]="'Role for ' + member.fullName" (change)="changeRole(member, $event)">@for (role of roles; track role) { <option [value]="role">{{ role }}</option> }</select> } @else { <span class="role-pill">{{ member.role }}</span> }</td>
+                  <td><span class="status" [class.inactive]="!member.isActive">{{ member.isActive ? 'Active' : 'Inactive' }}</span></td>
+                  @if (canManage) { <td>@if (member.isActive) { <button type="button" class="text-button" (click)="deactivateMember(member)" [disabled]="isLastActiveAdmin(member)">Remove</button> }</td> }
+                </tr>
+              } @empty { <tr><td class="empty-row" [attr.colspan]="canManage ? 4 : 3">No members found.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="projects-heading"><div><p class="eyebrow">DELIVERY</p><h2>Projects</h2></div><span class="count">{{ projects().length }}</span></div>
+        @if (canManageProjects) {
+          <form class="invite-form project-form" [formGroup]="projectForm" (ngSubmit)="createProject()">
+            <div class="field grow"><label for="project-name">Project name</label><input id="project-name" formControlName="name" placeholder="Reliability" /></div>
+            <div class="field key-field"><label for="project-key">Key</label><input id="project-key" formControlName="key" maxlength="10" placeholder="REL" /></div>
+            <div class="field grow"><label for="project-description">Description <span class="muted">Optional</span></label><input id="project-description" formControlName="description" maxlength="1000" placeholder="What is this project for?" /></div>
+            <button class="primary-button" type="submit" [disabled]="savingProject() || projectForm.invalid">{{ savingProject() ? 'Creating…' : 'Create project' }}</button>
+          </form>
+        }
+        <div class="project-list">
+          @for (project of projects(); track project.id) {
+            <article class="project-card">
+              <div class="project-key">{{ project.key }}</div>
+              <button type="button" class="project-copy project-link" (click)="viewProject(project)"><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p></button>
+              @if (canManage) { <button type="button" class="text-button" (click)="deactivateProject(project)">Archive</button> }
+            </article>
+          } @empty { <p class="empty-state">No active projects yet.</p> }
+        </div>
+        @if (selectedProject(); as project) {
+          <section class="project-details" aria-label="Project details">
+            <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p></div>
+            <small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small>
+          </section>
+        }
+      } @else {
+        <div class="placeholder"><span class="placeholder-icon">⌂</span><h2>Select an organization</h2><p>Choose a workspace on the left or create one to manage its members.</p></div>
+      }
+    </section>
+  </div>
+</main>
