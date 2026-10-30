@@ -37,9 +37,8 @@ This is not yet a complete or production-ready product. Work items and workflow,
 incidents, releases, SLAs, notifications, CI, containerized local development,
 operational hardening, and deployment practice remain future phases. No deployment
 has been performed. The Phase 2 authentication and Phase 3 multi-tenant learning
-checkpoints remain open. A .NET vulnerability scan was clean in Phase 2, but the
-Phase 3 recheck stalled before returning results; no .NET dependencies changed in
-Phase 3.
+checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
+only feed and completed with no vulnerable direct or transitive packages reported.
 
 ## Local setup
 
