@@ -4,7 +4,7 @@ FlowOps is a modular engineering-operations platform for work tracking, incident
 
 ## Current milestone
 
-Phase 2 authentication code is implemented and verified; phase sign-off is pending:
+Phases 2 and 3 have working implementations; learning sign-off is pending:
 
 - BCrypt password hashing
 - JWT access tokens held by the Angular client in memory
@@ -16,17 +16,30 @@ Phase 2 authentication code is implemented and verified; phase sign-off is pendi
 - Authentication rate limiting
 - Angular login, route guard, interceptor, refresh, and logout flow
 - API integration tests for the authentication pipeline
+- Organization creation, listing, update, and soft deactivation
+- Tenant-specific organization memberships and roles
+- Member role management, revocation, and last-active-admin protection
+- Project creation, listing, details, updates, and archival
+- Project keys unique within an organization
+- Tenant authorization enforced from active database membership
+- Audit events for organization, membership, and project changes
+- Angular organization, member, and project workspace UI
 
-The automated API tests use SQLite in memory. The SQL Server migrations were applied
-to the configured SQL Server Express database and a fresh LocalDB validation database;
-existing password hashes and refresh-token rotation families were preserved. A live
-API smoke run against the validation database verified health, registration, protected
-profile access, refresh rotation and replay revocation, and logout. The temporary
-smoke-test account was removed. The authentication learning check is still pending.
+The automated API tests use SQLite in memory. SQL Server migrations were applied to
+the configured SQL Server Express database and to an isolated Phase 3 validation
+database. Integration coverage currently has 27 backend tests and 9 Angular tests.
+The Angular production build passes, and the production npm audit reports zero
+vulnerabilities. A live SQL Server smoke flow verified registration, organization
+creation, project creation, listing, and authenticated reads. The local Angular app
+and API can be run using the steps below.
 
-This is an early development milestone, not a deploy-ready product. Organizations,
-projects, work items, incidents, releases, SLAs, notifications, Docker, CI/CD, and
-deployment are still future phases.
+This is not yet a complete or production-ready product. Work items and workflow,
+incidents, releases, SLAs, notifications, CI, containerized local development,
+operational hardening, and deployment practice remain future phases. No deployment
+has been performed. The Phase 2 authentication and Phase 3 multi-tenant learning
+checkpoints remain open. A .NET vulnerability scan was clean in Phase 2, but the
+Phase 3 recheck stalled before returning results; no .NET dependencies changed in
+Phase 3.
 
 ## Local setup
 

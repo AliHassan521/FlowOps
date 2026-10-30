@@ -71,9 +71,9 @@ Authorization operates at multiple levels:
 Example:
 
 ```text
-Organization Admin
-Team Lead
-Developer
+Admin
+TeamLead
+Engineer
 QA
 Viewer
 ```
@@ -92,6 +92,12 @@ Examples:
 - Only authorized users can approve releases.
 
 The server must enforce these rules.
+
+Organization and project authorization uses the active `OrganizationMembership` row
+for the authenticated user and requested organization. The role on that row is
+organization-specific; a role claim in the access token is not used to authorize
+tenant-owned resources. Admin and TeamLead can create/update projects, while only
+Admin can archive them. All active organization members can read projects.
 
 ---
 
@@ -112,10 +118,7 @@ Validate organization access
 Create project
     |
     v
-Assign owner/team membership where applicable
-    |
-    v
-Audit event
+Persist project and audit event atomically
 ```
 
 ### Project Constraints
@@ -124,6 +127,8 @@ Audit event
 - Project must belong to exactly one organization.
 - Access must respect organization boundaries.
 - Deletion should be considered carefully; archival is preferred for important records.
+- Project keys are immutable after creation in the current API.
+- Organization membership is required to list or read a project; organization role controls create, update, and archive actions.
 
 ---
 

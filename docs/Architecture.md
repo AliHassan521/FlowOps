@@ -217,6 +217,19 @@ Every organization-owned resource must have a clear relationship to the organiza
 
 The server must determine authorization from authenticated identity and resource ownership/membership rather than trusting organization identifiers supplied by the client.
 
+### Implemented organization/project access model
+
+- `OrganizationMembership` is keyed by `(OrganizationId, UserId)` and stores the active flag and role for that organization.
+- A user's organization role is resolved from the database membership on each organization/project operation. Global JWT role claims do not grant access to a tenant's resources.
+- The shared `Roles` table is the role catalog; the same user can have a different role in another organization.
+- Organization- and project-scoped queries include the requested organization ID and active membership. Cross-tenant requests from nonmembers return not found to avoid exposing resource existence; role restrictions for an active member return forbidden.
+- Only Admin and TeamLead can create or update projects; only Admin can archive them. All active organization members can read projects.
+- Organization and project keys/slugs have database unique indexes. Project keys are unique per organization.
+- Organization, membership, and project mutations write audit records in the same EF Core save/transaction as the business change.
+- Organization and project deactivation is soft; their rows and audit history remain in the database. Access still follows the active organization/membership rules.
+
+Only an organization Admin can change memberships. Requested roles are validated against the seeded role catalog; client-supplied role names never bypass the database membership check.
+
 Example:
 
 ```text
