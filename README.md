@@ -4,7 +4,7 @@ FlowOps is a modular engineering-operations platform for work tracking, incident
 
 ## Current milestone
 
-Phases 2 and 3 have working implementations; learning sign-off is pending:
+Phases 2 through 4 have working local implementations; learning sign-off is pending:
 
 - BCrypt password hashing
 - JWT access tokens held by the Angular client in memory
@@ -24,10 +24,12 @@ Phases 2 and 3 have working implementations; learning sign-off is pending:
 - Tenant authorization enforced from active database membership
 - Append-only audit events for organization, membership, and project changes
 - Angular organization, member, and project workspace UI
+- Tenant-scoped work item management for projects, including task/bug creation, assignment, priorities, workflow transitions, comments, filters, semantic sorting, pagination, and activity history
+- Responsive Angular work-item list and detail experience with role-aware actions
 
 The automated API tests use SQLite in memory. SQL Server migrations were applied to
 the configured SQL Server Express database and to an isolated Phase 3 validation
-database. Integration coverage currently has 29 backend tests and 21 Angular tests.
+database. Integration coverage currently has 32 backend tests and 24 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
 vulnerabilities. A live SQL Server smoke flow verified registration, organization
 creation, membership assignment, deactivation, and access revocation. The local
@@ -36,8 +38,8 @@ Angular app and API can be run using the steps below.
 This is not yet a complete or production-ready product. Work items and workflow,
 incidents, releases, SLAs, notifications, CI, containerized local development,
 operational hardening, and deployment practice remain future phases. No deployment
-has been performed. The Phase 2 authentication and Phase 3 multi-tenant learning
-checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
+has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
+workflow learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.
 
 ## Local setup

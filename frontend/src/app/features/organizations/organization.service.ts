@@ -13,6 +13,10 @@ export class OrganizationService {
     return this.http.get<PagedResponse<Organization>>(this.endpoint);
   }
 
+  get(organizationId: string): Observable<Organization> {
+    return this.http.get<Organization>(`${this.endpoint}/${organizationId}`);
+  }
+
   create(input: { name: string; slug: string; description: string | null }): Observable<Organization> {
     return this.http.post<Organization>(this.endpoint, input);
   }

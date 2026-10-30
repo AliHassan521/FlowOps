@@ -281,6 +281,21 @@ SignalR update where appropriate
 
 Do not allow arbitrary direct status mutation from multiple places.
 
+Phase 4 implements this boundary in `WorkItemService` and `WorkItemWorkflow`.
+The service loads the active organization membership and verifies that the
+project belongs to that organization before reading or mutating work items.
+The domain workflow owns the allowed state graph; the application service adds
+role and assignee checks before asking the entity to change state. Important
+changes and comments append `AuditEvent` rows in the same database save as the
+business change. Notifications and SignalR delivery remain later phases.
+
+The current state graph is `New -> Triaged -> Assigned -> InProgress ->
+CodeReview -> QA -> Resolved -> Closed`, with rework transitions from CodeReview,
+QA, Resolved, and Closed back to InProgress. Assignment is required before
+Assigned or InProgress. Admins and TeamLeads may move through any valid edge;
+QA and the assigned Engineer have narrower transition permissions enforced by
+the service.
+
 ---
 
 ## 8. Background Processing Architecture

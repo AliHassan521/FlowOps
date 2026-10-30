@@ -32,6 +32,8 @@ public class FlowOpsDbContext : DbContext
     public DbSet<OrganizationMembership> OrganizationMemberships => Set<OrganizationMembership>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<WorkItem> WorkItems => Set<WorkItem>();
+    public DbSet<WorkItemComment> WorkItemComments => Set<WorkItemComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -8,6 +8,7 @@ using FlowOps.Contracts.Auth;
 using FlowOps.Contracts.Common;
 using FlowOps.Contracts.Organizations;
 using FlowOps.Contracts.Projects;
+using FlowOps.Contracts.WorkItems;
 using FlowOps.Domain.Entities;
 using FlowOps.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -452,6 +453,229 @@ public sealed class AuthApiTests : IDisposable
         var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
         Assert.Equal(3, await dbContext.AuditEvents.CountAsync(auditEvent =>
             auditEvent.OrganizationId == organization.Id && auditEvent.EntityType == "Project"));
+    }
+
+    [Fact]
+    public async Task Work_item_workflow_enforces_transitions_assignment_roles_and_audit_history()
+    {
+        var admin = await RegisterAndAuthorizeAsync("work-item-admin@example.com");
+        using var organizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Work Item Team", "work-item-team", null));
+        var organization = await organizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+        var projectPath = $"/api/organizations/{organization.Id}/projects";
+        using var projectResponse = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Work Item Project", "WIP", null));
+        var project = await projectResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(project);
+        var workItemsPath = $"{projectPath}/{project.Id}/work-items";
+
+        var engineer = await RegisterAndAuthorizeAsync("work-item-engineer@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addEngineer = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("work-item-engineer@example.com", "Engineer"));
+        Assert.Equal(HttpStatusCode.OK, addEngineer.StatusCode);
+        var qa = await RegisterAndAuthorizeAsync("work-item-qa@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addQa = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("work-item-qa@example.com", "QA"));
+        Assert.Equal(HttpStatusCode.OK, addQa.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", engineer.AccessToken);
+        using var create = await _client.PostAsJsonAsync(workItemsPath,
+            new CreateWorkItemRequest("Task", "Ship the API", "Implement the resource flow", "High", null, null));
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var workItem = await create.Content.ReadFromJsonAsync<WorkItemResponse>();
+        Assert.NotNull(workItem);
+        Assert.Equal("New", workItem.Status);
+
+        using var engineerCannotTriage = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Triaged"));
+        Assert.Equal(HttpStatusCode.Forbidden, engineerCannotTriage.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var invalidSkip = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Assigned"));
+        Assert.Equal(HttpStatusCode.Conflict, invalidSkip.StatusCode);
+
+        using var triage = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Triaged"));
+        Assert.Equal(HttpStatusCode.OK, triage.StatusCode);
+        using var unassigned = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Assigned"));
+        Assert.Equal(HttpStatusCode.Conflict, unassigned.StatusCode);
+
+        using var assign = await _client.PutAsJsonAsync($"{workItemsPath}/{workItem.Id}/assignee",
+            new AssignWorkItemRequest(engineer.UserId));
+        Assert.Equal(HttpStatusCode.OK, assign.StatusCode);
+        using var assigned = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Assigned"));
+        Assert.Equal(HttpStatusCode.OK, assigned.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", engineer.AccessToken);
+        using var inProgress = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("InProgress"));
+        Assert.Equal(HttpStatusCode.OK, inProgress.StatusCode);
+        using var codeReview = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("CodeReview"));
+        Assert.Equal(HttpStatusCode.OK, codeReview.StatusCode);
+        using var engineerCannotApproveQa = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("QA"));
+        Assert.Equal(HttpStatusCode.Forbidden, engineerCannotApproveQa.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", qa.AccessToken);
+        using var qaReview = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("QA"));
+        Assert.Equal(HttpStatusCode.OK, qaReview.StatusCode);
+        using var qaResolve = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Resolved"));
+        Assert.Equal(HttpStatusCode.OK, qaResolve.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var close = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("Closed"));
+        Assert.Equal(HttpStatusCode.OK, close.StatusCode);
+        using var reopen = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/transitions",
+            new TransitionWorkItemRequest("New"));
+        Assert.Equal(HttpStatusCode.Conflict, reopen.StatusCode);
+
+        using var historyResponse = await _client.GetAsync($"{workItemsPath}/{workItem.Id}/history");
+        Assert.Equal(HttpStatusCode.OK, historyResponse.StatusCode);
+        var history = await historyResponse.Content.ReadFromJsonAsync<PagedResponse<WorkItemHistoryResponse>>();
+        Assert.NotNull(history);
+        Assert.Equal(9, history.TotalCount);
+    }
+
+    [Fact]
+    public async Task Work_items_support_filtering_pagination_comments_and_metadata_updates()
+    {
+        var admin = await RegisterAndAuthorizeAsync("work-item-list-admin@example.com");
+        using var organizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Work Item Lists", "work-item-lists", null));
+        var organization = await organizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+        var projectPath = $"/api/organizations/{organization.Id}/projects";
+        using var projectResponse = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Filter Project", "FLT", null));
+        var project = await projectResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(project);
+        var workItemsPath = $"{projectPath}/{project.Id}/work-items";
+
+        using var taskResponse = await _client.PostAsJsonAsync(workItemsPath,
+            new CreateWorkItemRequest("Task", "Zeta implementation", null, "High", null, null));
+        Assert.Equal(HttpStatusCode.Created, taskResponse.StatusCode);
+        var task = await taskResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        Assert.NotNull(task);
+        using var bugResponse = await _client.PostAsJsonAsync(workItemsPath,
+            new CreateWorkItemRequest("Bug", "Alpha dashboard defect", "Date formatting is wrong", "Critical", null, null));
+        Assert.Equal(HttpStatusCode.Created, bugResponse.StatusCode);
+        var bug = await bugResponse.Content.ReadFromJsonAsync<WorkItemResponse>();
+        Assert.NotNull(bug);
+
+        using var badFilter = await _client.GetAsync($"{workItemsPath}?status=Whatever");
+        Assert.Equal(HttpStatusCode.BadRequest, badFilter.StatusCode);
+        using var badSort = await _client.GetAsync($"{workItemsPath}?sortBy=sql");
+        Assert.Equal(HttpStatusCode.BadRequest, badSort.StatusCode);
+        using var badPaging = await _client.GetAsync($"{workItemsPath}?page=0&pageSize=1000");
+        Assert.Equal(HttpStatusCode.BadRequest, badPaging.StatusCode);
+
+        using var listResponse = await _client.GetAsync($"{workItemsPath}?type=Bug&priority=Critical&search=dashboard&page=1&pageSize=1&sortBy=title&sortDirection=asc");
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var filtered = await listResponse.Content.ReadFromJsonAsync<PagedResponse<WorkItemResponse>>();
+        Assert.NotNull(filtered);
+        Assert.Equal(1, filtered.TotalCount);
+        Assert.Equal(bug.Id, Assert.Single(filtered.Items).Id);
+
+        using var pagedResponse = await _client.GetAsync($"{workItemsPath}?page=1&pageSize=1&sortBy=title&sortDirection=asc");
+        var paged = await pagedResponse.Content.ReadFromJsonAsync<PagedResponse<WorkItemResponse>>();
+        Assert.NotNull(paged);
+        Assert.Equal(2, paged.TotalCount);
+        Assert.Equal("Alpha dashboard defect", Assert.Single(paged.Items).Title);
+
+        using var priorityOrderedResponse = await _client.GetAsync($"{workItemsPath}?sortBy=priority&sortDirection=asc");
+        var priorityOrdered = await priorityOrderedResponse.Content.ReadFromJsonAsync<PagedResponse<WorkItemResponse>>();
+        Assert.NotNull(priorityOrdered);
+        Assert.Equal("High", priorityOrdered.Items[0].Priority);
+        Assert.Equal("Critical", priorityOrdered.Items[1].Priority);
+
+        using var update = await _client.PutAsJsonAsync($"{workItemsPath}/{bug.Id}",
+            new UpdateWorkItemRequest("Alpha dashboard date defect", "Date formatting is inconsistent", "High", null));
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var updated = await update.Content.ReadFromJsonAsync<WorkItemResponse>();
+        Assert.NotNull(updated);
+        Assert.Equal("High", updated.Priority);
+
+        using var addComment = await _client.PostAsJsonAsync($"{workItemsPath}/{bug.Id}/comments",
+            new AddWorkItemCommentRequest("  Reproduced in the overview.  "));
+        Assert.Equal(HttpStatusCode.Created, addComment.StatusCode);
+        var comment = await addComment.Content.ReadFromJsonAsync<WorkItemCommentResponse>();
+        Assert.NotNull(comment);
+        Assert.Equal("Reproduced in the overview.", comment.Body);
+        using var listComments = await _client.GetAsync($"{workItemsPath}/{bug.Id}/comments?page=1&pageSize=10");
+        var comments = await listComments.Content.ReadFromJsonAsync<PagedResponse<WorkItemCommentResponse>>();
+        Assert.NotNull(comments);
+        Assert.Equal(comment.Id, Assert.Single(comments.Items).Id);
+        using var oversizedComment = await _client.PostAsJsonAsync($"{workItemsPath}/{bug.Id}/comments",
+            new AddWorkItemCommentRequest(new string('x', 4001)));
+        Assert.Equal(HttpStatusCode.BadRequest, oversizedComment.StatusCode);
+
+        using var itemHistoryResponse = await _client.GetAsync($"{workItemsPath}/{bug.Id}/history");
+        var itemHistory = await itemHistoryResponse.Content.ReadFromJsonAsync<PagedResponse<WorkItemHistoryResponse>>();
+        Assert.NotNull(itemHistory);
+        Assert.Equal(3, itemHistory.TotalCount);
+    }
+
+    [Fact]
+    public async Task Work_items_are_tenant_scoped_and_viewer_members_are_read_only()
+    {
+        var admin = await RegisterAndAuthorizeAsync("work-item-access-admin@example.com");
+        using var organizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Work Item Access", "work-item-access", null));
+        var organization = await organizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+        var projectPath = $"/api/organizations/{organization.Id}/projects";
+        using var projectResponse = await _client.PostAsJsonAsync(projectPath,
+            new CreateProjectRequest("Access Project", "ACL", null));
+        var project = await projectResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(project);
+        var workItemsPath = $"{projectPath}/{project.Id}/work-items";
+        using var create = await _client.PostAsJsonAsync(workItemsPath,
+            new CreateWorkItemRequest("Bug", "Tenant-only defect", null, "Medium", null, null));
+        var workItem = await create.Content.ReadFromJsonAsync<WorkItemResponse>();
+        Assert.NotNull(workItem);
+
+        var viewer = await RegisterAndAuthorizeAsync("work-item-viewer@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addViewer = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("work-item-viewer@example.com", "Viewer"));
+        Assert.Equal(HttpStatusCode.OK, addViewer.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", viewer.AccessToken);
+        using var allowedRead = await _client.GetAsync($"{workItemsPath}/{workItem.Id}");
+        Assert.Equal(HttpStatusCode.OK, allowedRead.StatusCode);
+        using var deniedCreate = await _client.PostAsJsonAsync(workItemsPath,
+            new CreateWorkItemRequest("Task", "Viewer write", null, "Low", null, null));
+        Assert.Equal(HttpStatusCode.Forbidden, deniedCreate.StatusCode);
+        using var deniedComment = await _client.PostAsJsonAsync($"{workItemsPath}/{workItem.Id}/comments",
+            new AddWorkItemCommentRequest("Read-only member"));
+        Assert.Equal(HttpStatusCode.Forbidden, deniedComment.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var viewerAssignment = await _client.PutAsJsonAsync($"{workItemsPath}/{workItem.Id}/assignee",
+            new AssignWorkItemRequest(viewer.UserId));
+        Assert.Equal(HttpStatusCode.NotFound, viewerAssignment.StatusCode);
+
+        using var otherOrganizationResponse = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Another Work Item Org", "another-work-item-org", null));
+        var otherOrganization = await otherOrganizationResponse.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(otherOrganization);
+        using var otherProjectResponse = await _client.PostAsJsonAsync($"/api/organizations/{otherOrganization.Id}/projects",
+            new CreateProjectRequest("Other Access Project", "OAC", null));
+        var otherProject = await otherProjectResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(otherProject);
+        using var crossTenant = await _client.GetAsync(
+            $"/api/organizations/{otherOrganization.Id}/projects/{otherProject.Id}/work-items/{workItem.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
     }
 
     private async Task<AuthResponse> RegisterAndAuthorizeAsync(string email)

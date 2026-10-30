@@ -21,4 +21,6 @@ public sealed class Project
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAtUtc { get; set; }
+
+    public ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();
 }

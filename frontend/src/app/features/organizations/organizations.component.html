@@ -128,7 +128,7 @@
                 <div class="form-actions"><button class="primary-button" type="submit" [disabled]="savingProjectEdit() || projectEditForm.invalid">{{ savingProjectEdit() ? 'Saving…' : 'Save project' }}</button><button class="secondary-button" type="button" (click)="cancelEditingProject()">Cancel</button></div>
               </form>
             } @else {
-              <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p><small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small></div>
+              <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p><small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small><a class="work-items-link" [routerLink]="['/organizations', organization.id, 'projects', project.id, 'work-items']">Open work items <span aria-hidden="true">→</span></a></div>
               @if (canManageProjects) { <div class="form-actions"><button type="button" class="secondary-button" (click)="startEditingProject()">Edit project</button>@if (canManage) { <button type="button" class="danger-button" (click)="deactivateProject(project)">Archive</button> }</div> }
             }
           </section>

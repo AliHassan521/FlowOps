@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IProjectService, ProjectService>();
+        services.AddScoped<IWorkItemService, WorkItemService>();
 
         return services;
     }

@@ -338,6 +338,98 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssigneeUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DueAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeUserId");
+
+                    b.HasIndex("ReporterUserId");
+
+                    b.HasIndex("ProjectId", "AssigneeUserId", "Status");
+
+                    b.HasIndex("ProjectId", "Priority", "DueAtUtc");
+
+                    b.HasIndex("ProjectId", "Status", "CreatedAtUtc");
+
+                    b.ToTable("WorkItems", (string)null);
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItemComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("WorkItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("WorkItemId", "CreatedAtUtc");
+
+                    b.ToTable("WorkItemComments", (string)null);
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.AuditEvent", b =>
                 {
                     b.HasOne("FlowOps.Domain.Entities.User", "Actor")
@@ -425,11 +517,61 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItem", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.User", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlowOps.Domain.Entities.Project", "Project")
+                        .WithMany("WorkItems")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assignee");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItemComment", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.WorkItem", "WorkItem")
+                        .WithMany("Comments")
+                        .HasForeignKey("WorkItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("WorkItem");
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.Organization", b =>
                 {
                     b.Navigation("AuditEvents");
 
                     b.Navigation("Memberships");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.Project", b =>
+                {
+                    b.Navigation("WorkItems");
                 });
 
             modelBuilder.Entity("FlowOps.Domain.Entities.Role", b =>
@@ -442,6 +584,11 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Navigation("RefreshTokens");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItem", b =>
+                {
+                    b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618
         }

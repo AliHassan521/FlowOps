@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 3 — Organizations, Projects & Membership
-- **Current task:** Complete the Phase 3 architecture and learning review before starting Phase 4.
-- **Verified so far:** Phase 2 implementation and security checks; Phase 3 SQL Server Express migrations; 29 backend integration tests; 21 Angular tests; clean Angular production build; production npm audit (0 vulnerabilities); .NET vulnerability audit (no vulnerable direct or transitive packages reported); successful NuGet restore using the repo audit-source configuration; live local SQL Server API smoke flow covering registration, organization creation, membership assignment, deactivation, and post-deactivation access revocation. A visual browser review is still outstanding because the isolated browser could not reach the local Angular dev server.
-- **Learning status:** The Phase 2 authentication understanding check remains pending. Phase 3 technical checks pass, including append-only audit persistence; its multi-tenant understanding check is pending.
-- **Local run:** API at `http://localhost:5144` and Angular at `http://localhost:4200`, using the isolated `FlowOpsPhase3Validation` SQL Server Express database. No deployment has been performed.
-- **Next phase:** Phase 4 — Work Items & Workflow Engine, after the Phase 3 learning checkpoint.
+- **Current phase:** Phase 4 — Work Items & Workflow Engine
+- **Current task:** Complete local verification and close the Phase 4 implementation.
+- **Verified so far:** Phases 2 and 3 retain their prior API, database, security, and UI verification. Phase 4 now includes tenant-scoped work item CRUD, server-enforced assignment and transition rules, comments, append-only activity history, filtering, semantic sorting, pagination, and the Angular project work-item experience. Frontend: production build passes; 24 tests pass. Backend suite verification is being rerun after the sorting regression test was added. SQL Server Phase 4 migration and an end-to-end lifecycle smoke flow were previously applied to the isolated `FlowOpsPhase3Validation` database.
+- **Learning status:** Phase 2 authentication and Phase 3 multi-tenant understanding checks remain open. Phase 4 learning check is pending; implementation proceeds on the user's direction.
+- **Local run:** No deployment has been performed. Use the documented local API, Angular, and isolated SQL Server workflow.
+- **Next phase:** Phase 5 — Notifications & Real-Time Communication, only after Phase 4 verification and commit.
 
 ---
 
@@ -249,20 +249,20 @@ Move beyond CRUD by implementing real business rules.
 
 ## Tasks
 
-- [ ] Work item model
-- [ ] Task/Bug types
-- [ ] Create/update/list
-- [ ] Assignment
-- [ ] Priorities
-- [ ] Status model
-- [ ] Workflow transition service
-- [ ] Invalid transition handling
-- [ ] Comments
-- [ ] Filtering
-- [ ] Sorting
-- [ ] Pagination
-- [ ] Audit history
-- [ ] Angular work-item views
+- [x] Work item model
+- [x] Task/Bug types
+- [x] Create/update/list
+- [x] Assignment
+- [x] Priorities
+- [x] Status model
+- [x] Workflow transition service
+- [x] Invalid transition handling
+- [x] Comments
+- [x] Filtering
+- [x] Sorting
+- [x] Pagination
+- [x] Audit history
+- [x] Angular work-item views
 
 ## Acceptance Criteria
 
