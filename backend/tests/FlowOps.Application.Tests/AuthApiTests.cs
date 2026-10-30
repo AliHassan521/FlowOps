@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using FlowOps.Contracts.Auth;
+using FlowOps.Contracts.Common;
 using FlowOps.Contracts.Organizations;
 using FlowOps.Contracts.Projects;
 using FlowOps.Domain.Entities;
@@ -232,6 +233,10 @@ public sealed class AuthApiTests : IDisposable
         Assert.NotNull(organization);
         Assert.Equal("Admin", organization.CurrentUserRole);
 
+        using var invalidOrganization = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Invalid Slug", "Bad Slug", null));
+        Assert.Equal(HttpStatusCode.BadRequest, invalidOrganization.StatusCode);
+
         using var duplicate = await _client.PostAsJsonAsync("/api/organizations",
             new CreateOrganizationRequest("Another Team", "platform-team", null));
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
@@ -242,12 +247,21 @@ public sealed class AuthApiTests : IDisposable
             new AddOrganizationMemberRequest("ENGINEER@example.com", "Engineer"));
         Assert.Equal(HttpStatusCode.OK, addMember.StatusCode);
 
+        using var duplicateMember = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("engineer@example.com", "Engineer"));
+        Assert.Equal(HttpStatusCode.Conflict, duplicateMember.StatusCode);
+
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", member.AccessToken);
         using var getOrganization = await _client.GetAsync($"/api/organizations/{organization.Id}");
         Assert.Equal(HttpStatusCode.OK, getOrganization.StatusCode);
         var memberOrganization = await getOrganization.Content.ReadFromJsonAsync<OrganizationResponse>();
         Assert.NotNull(memberOrganization);
         Assert.Equal("Engineer", memberOrganization.CurrentUserRole);
+        using var membersResponse = await _client.GetAsync($"/api/organizations/{organization.Id}/members");
+        Assert.Equal(HttpStatusCode.OK, membersResponse.StatusCode);
+        var members = await membersResponse.Content.ReadFromJsonAsync<PagedResponse<OrganizationMemberResponse>>();
+        Assert.NotNull(members);
+        Assert.Equal(2, members.TotalCount);
 
         using var forbiddenUpdate = await _client.PutAsJsonAsync($"/api/organizations/{organization.Id}",
             new UpdateOrganizationRequest("Stolen", null));
@@ -263,9 +277,15 @@ public sealed class AuthApiTests : IDisposable
         using var crossTenant = await _client.GetAsync($"/api/organizations/{secondOrganization.Id}");
         Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
 
+        using var deactivateMember = await _client.DeleteAsync($"/api/organizations/{organization.Id}/members/{member.UserId}");
+        Assert.Equal(HttpStatusCode.NoContent, deactivateMember.StatusCode);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", member.AccessToken);
+        using var revokedMemberAccess = await _client.GetAsync($"/api/organizations/{organization.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, revokedMemberAccess.StatusCode);
+
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
-        Assert.Equal(2, await dbContext.AuditEvents.CountAsync(auditEvent => auditEvent.OrganizationId == organization.Id));
+        Assert.Equal(3, await dbContext.AuditEvents.CountAsync(auditEvent => auditEvent.OrganizationId == organization.Id));
     }
 
     [Fact]
@@ -316,6 +336,13 @@ public sealed class AuthApiTests : IDisposable
             new CreateProjectRequest("Other Project", "REL", null));
         Assert.Equal(HttpStatusCode.Conflict, duplicateKey.StatusCode);
 
+        using var teamLeadUpdate = await _client.PutAsJsonAsync($"{projectPath}/{project.Id}",
+            new UpdateProjectRequest("Reliability Engineering", "Operational readiness"));
+        Assert.Equal(HttpStatusCode.OK, teamLeadUpdate.StatusCode);
+        var updatedProject = await teamLeadUpdate.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(updatedProject);
+        Assert.Equal("Reliability Engineering", updatedProject.Name);
+
         var engineer = await RegisterAndAuthorizeAsync("project-engineer@example.com");
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
         using var addEngineer = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
@@ -328,6 +355,9 @@ public sealed class AuthApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, deniedCreate.StatusCode);
         using var allowedList = await _client.GetAsync(projectPath);
         Assert.Equal(HttpStatusCode.OK, allowedList.StatusCode);
+        using var deniedUpdate = await _client.PutAsJsonAsync($"{projectPath}/{project.Id}",
+            new UpdateProjectRequest("Unauthorized Rename", null));
+        Assert.Equal(HttpStatusCode.Forbidden, deniedUpdate.StatusCode);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
         using var otherOrganizationResponse = await _client.PostAsJsonAsync("/api/organizations",
@@ -340,6 +370,8 @@ public sealed class AuthApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Created, sameKeyDifferentOrganization.StatusCode);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", engineer.AccessToken);
+        using var crossTenantList = await _client.GetAsync(otherProjectPath);
+        Assert.Equal(HttpStatusCode.NotFound, crossTenantList.StatusCode);
         using var crossTenant = await _client.GetAsync($"{otherProjectPath}/{project.Id}");
         Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
 
@@ -348,6 +380,11 @@ public sealed class AuthApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, deactivate.StatusCode);
         using var hiddenProject = await _client.GetAsync($"{projectPath}/{project.Id}");
         Assert.Equal(HttpStatusCode.NotFound, hiddenProject.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+        Assert.Equal(3, await dbContext.AuditEvents.CountAsync(auditEvent =>
+            auditEvent.OrganizationId == organization.Id && auditEvent.EntityType == "Project"));
     }
 
     private async Task<AuthResponse> RegisterAndAuthorizeAsync(string email)
