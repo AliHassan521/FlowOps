@@ -289,6 +289,41 @@ public sealed class AuthApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Organization_deactivation_removes_member_access_and_preserves_audit_history()
+    {
+        var admin = await RegisterAndAuthorizeAsync("deactivation-admin@example.com");
+        using var create = await _client.PostAsJsonAsync("/api/organizations",
+            new CreateOrganizationRequest("Retiring Team", "retiring-team", null));
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var organization = await create.Content.ReadFromJsonAsync<OrganizationResponse>();
+        Assert.NotNull(organization);
+
+        var member = await RegisterAndAuthorizeAsync("deactivation-member@example.com");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+        using var addMember = await _client.PostAsJsonAsync($"/api/organizations/{organization.Id}/members",
+            new AddOrganizationMemberRequest("deactivation-member@example.com", "Engineer"));
+        Assert.Equal(HttpStatusCode.OK, addMember.StatusCode);
+
+        using var deactivate = await _client.DeleteAsync($"/api/organizations/{organization.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deactivate.StatusCode);
+
+        foreach (var accessToken in new[] { admin.AccessToken, member.AccessToken })
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var getOrganization = await _client.GetAsync($"/api/organizations/{organization.Id}");
+            Assert.Equal(HttpStatusCode.NotFound, getOrganization.StatusCode);
+            using var listProjects = await _client.GetAsync($"/api/organizations/{organization.Id}/projects");
+            Assert.Equal(HttpStatusCode.NotFound, listProjects.StatusCode);
+        }
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+        Assert.Equal(3, await dbContext.AuditEvents.CountAsync(auditEvent => auditEvent.OrganizationId == organization.Id));
+        Assert.Contains(await dbContext.AuditEvents.Where(auditEvent => auditEvent.OrganizationId == organization.Id)
+            .Select(auditEvent => auditEvent.Action).ToListAsync(), action => action == "Organization.Deactivated");
+    }
+
+    [Fact]
     public async Task Organization_must_retain_an_active_admin_and_invalid_paging_is_rejected()
     {
         var admin = await RegisterAndAuthorizeAsync("sole-admin@example.com");
