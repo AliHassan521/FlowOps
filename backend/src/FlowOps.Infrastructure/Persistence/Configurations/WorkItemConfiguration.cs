@@ -10,6 +10,7 @@ public sealed class WorkItemConfiguration : IEntityTypeConfiguration<WorkItem>
     {
         builder.ToTable("WorkItems");
         builder.HasKey(workItem => workItem.Id);
+        builder.Property(workItem => workItem.Version).IsConcurrencyToken();
 
         builder.Property(workItem => workItem.Type).HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Property(workItem => workItem.Title).HasMaxLength(200).IsRequired();

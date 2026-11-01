@@ -35,6 +35,13 @@ export class OrganizationsComponent implements OnInit {
   readonly savingProjectEdit = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
+  readonly organizationTotal = signal(0);
+  readonly memberTotal = signal(0);
+  readonly projectTotal = signal(0);
+  readonly loadingMore = signal(false);
+  private organizationPage = 1;
+  private memberPage = 1;
+  private projectPage = 1;
   readonly roles = ORGANIZATION_ROLES;
 
   readonly organizationForm = this.formBuilder.nonNullable.group({
@@ -78,6 +85,7 @@ export class OrganizationsComponent implements OnInit {
     this.organizationsApi.list().pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (response) => {
         this.organizations.set(response.items);
+        this.organizationTotal.set(response.totalCount); this.organizationPage = 1;
         const current = this.selectedOrganization();
         const next = response.items.find((organization) => organization.id === current?.id) ?? response.items[0] ?? null;
         this.selectOrganization(next);
@@ -87,6 +95,7 @@ export class OrganizationsComponent implements OnInit {
   }
 
   selectOrganization(organization: Organization | null): void {
+    this.memberPage = 1; this.projectPage = 1; this.memberTotal.set(0); this.projectTotal.set(0);
     this.selectedOrganization.set(organization);
     this.editingOrganization.set(false);
     this.confirmOrganizationDeactivation.set(false);
@@ -357,13 +366,14 @@ export class OrganizationsComponent implements OnInit {
 
   isLastActiveAdmin(member: OrganizationMember): boolean {
     return member.isActive && member.role === 'Admin'
+      && this.members().length >= this.memberTotal()
       && this.members().filter((candidate) => candidate.isActive && candidate.role === 'Admin').length === 1;
   }
 
   private loadMembers(organizationId: string): void {
     this.organizationsApi.members(organizationId).subscribe({
       next: (response) => {
-        if (this.selectedOrganization()?.id === organizationId) this.members.set(response.items);
+        if (this.selectedOrganization()?.id === organizationId) { this.members.set(response.items); this.memberTotal.set(response.totalCount); this.memberPage = 1; }
       },
       error: () => {
         if (this.selectedOrganization()?.id === organizationId) this.error.set('Members could not be reloaded.');
@@ -374,7 +384,7 @@ export class OrganizationsComponent implements OnInit {
   private loadProjects(organizationId: string): void {
     this.organizationsApi.projects(organizationId).subscribe({
       next: (response) => {
-        if (this.selectedOrganization()?.id === organizationId) this.projects.set(response.items);
+        if (this.selectedOrganization()?.id === organizationId) { this.projects.set(response.items); this.projectTotal.set(response.totalCount); this.projectPage = 1; }
       },
       error: () => {
         if (this.selectedOrganization()?.id === organizationId) this.error.set('Projects could not be loaded for this organization.');
@@ -388,5 +398,32 @@ export class OrganizationsComponent implements OnInit {
     if (response.status === 404) return 'The account or organization could not be found.';
     if (response.status === 0 || response.status >= 500) return 'The server could not complete the request. Try again shortly.';
     return response.error?.message ?? fallback;
+  }
+
+  loadMoreOrganizations(): void {
+    if (this.loadingMore()) return;
+    this.loadingMore.set(true);
+    this.organizationsApi.list(this.organizationPage + 1).pipe(finalize(() => this.loadingMore.set(false))).subscribe({
+      next: result => { this.organizationPage++; this.organizationTotal.set(result.totalCount); this.organizations.update(items => [...new Map([...items, ...result.items].map(item => [item.id, item])).values()]); },
+      error: () => this.error.set('More organizations could not be loaded.'),
+    });
+  }
+
+  loadMoreMembers(): void {
+    const organization = this.selectedOrganization(); if (!organization || this.loadingMore()) return;
+    this.loadingMore.set(true);
+    this.organizationsApi.members(organization.id, this.memberPage + 1).pipe(finalize(() => this.loadingMore.set(false))).subscribe({
+      next: result => { if (this.selectedOrganization()?.id !== organization.id) return; this.memberPage++; this.memberTotal.set(result.totalCount); this.members.update(items => [...new Map([...items, ...result.items].map(item => [item.userId, item])).values()]); },
+      error: () => this.error.set('More members could not be loaded.'),
+    });
+  }
+
+  loadMoreProjects(): void {
+    const organization = this.selectedOrganization(); if (!organization || this.loadingMore()) return;
+    this.loadingMore.set(true);
+    this.organizationsApi.projects(organization.id, this.projectPage + 1).pipe(finalize(() => this.loadingMore.set(false))).subscribe({
+      next: result => { if (this.selectedOrganization()?.id !== organization.id) return; this.projectPage++; this.projectTotal.set(result.totalCount); this.projects.update(items => [...new Map([...items, ...result.items].map(item => [item.id, item])).values()]); },
+      error: () => this.error.set('More projects could not be loaded.'),
+    });
   }
 }

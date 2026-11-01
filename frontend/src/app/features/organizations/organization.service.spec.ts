@@ -16,6 +16,14 @@ describe('OrganizationService', () => {
 
   afterEach(() => http.verify());
 
+  it('requests later pages without dropping pagination parameters', () => {
+    service.members('org-id', 2).subscribe();
+    const request = http.expectOne(request => request.url === `${API_BASE_URL}/organizations/org-id/members`);
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('pageSize')).toBe('50');
+    request.flush({ items: [], totalCount: 60, page: 2, pageSize: 50 });
+  });
+
   it('requests only the current user organizations from the protected API', () => {
     service.list().subscribe((response) => expect(response.items).toEqual([]));
     const request = http.expectOne(`${API_BASE_URL}/organizations`);

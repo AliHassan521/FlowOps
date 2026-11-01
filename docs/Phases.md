@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 4 — Work Items & Workflow Engine
-- **Current task:** Complete local verification and close the Phase 4 implementation.
-- **Verified so far:** Phases 2 and 3 retain their prior API, database, security, and UI verification. Phase 4 now includes tenant-scoped work item CRUD, server-enforced assignment and transition rules, comments, append-only activity history, filtering, semantic sorting, pagination, and the Angular project work-item experience. Frontend: production build passes; 24 tests pass. Backend suite verification is being rerun after the sorting regression test was added. SQL Server Phase 4 migration and an end-to-end lifecycle smoke flow were previously applied to the isolated `FlowOpsPhase3Validation` database.
-- **Learning status:** Phase 2 authentication and Phase 3 multi-tenant understanding checks remain open. Phase 4 learning check is pending; implementation proceeds on the user's direction.
+- **Current phase:** Phase 5 — Notifications & Real-Time Communication
+- **Current task:** Local Phase 5 implementation and verification completed; learning checkpoints remain open.
+- **Verified so far:** Durable work-item notifications, paginated unread/read APIs, authenticated recipient-only SignalR hints, reconnect/offline recovery, and the Angular notification inbox are implemented. All 41 backend tests and 37 Angular tests pass. Release and frontend production builds pass. Both local SQL Server databases have all nine migrations. A real SQL Server/SignalR smoke flow passed. Phase 4 audit fixes include work-item concurrency, UTC materialization, assignment consistency, credential scoping, refresh error handling, stale-response cancellation, and later-page access.
+- **Learning status:** Phase 2 authentication, Phase 3 multi-tenant, Phase 4 workflow, and Phase 5 real-time understanding checks remain open; implementation proceeds on the user's direction. These are not automatically signed off by tests.
 - **Local run:** No deployment has been performed. Use the documented local API, Angular, and isolated SQL Server workflow.
-- **Next phase:** Phase 5 — Notifications & Real-Time Communication, only after Phase 4 verification and commit.
+- **Next phase:** Phase 6 — SLA & Background Processing, on the user's direction after the Phase 5 milestone.
 
 ---
 
@@ -298,14 +298,14 @@ Add real-time user feedback.
 
 ## Tasks
 
-- [ ] Notification entity
-- [ ] Notification persistence
-- [ ] Notification API
-- [ ] SignalR hub
-- [ ] Client connection handling
-- [ ] Real-time event delivery
-- [ ] Notification UI
-- [ ] Mark-as-read behavior
+- [x] Notification entity
+- [x] Notification persistence
+- [x] Notification API
+- [x] SignalR hub
+- [x] Client connection handling
+- [x] Real-time event delivery
+- [x] Notification UI
+- [x] Mark-as-read behavior
 
 ## Acceptance Criteria
 

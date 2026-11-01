@@ -41,16 +41,16 @@ export class WorkItemService {
     return this.http.post<WorkItem>(`${this.endpoint(organizationId, projectId)}/${workItemId}/transitions`, { status });
   }
 
-  comments(organizationId: string, projectId: string, workItemId: string): Observable<WorkItemPage<WorkItemComment>> {
-    return this.http.get<WorkItemPage<WorkItemComment>>(`${this.endpoint(organizationId, projectId)}/${workItemId}/comments`);
+  comments(organizationId: string, projectId: string, workItemId: string, page = 1): Observable<WorkItemPage<WorkItemComment>> {
+    return this.http.get<WorkItemPage<WorkItemComment>>(`${this.endpoint(organizationId, projectId)}/${workItemId}/comments`, { params: new HttpParams().set('page', page).set('pageSize', 50) });
   }
 
   addComment(organizationId: string, projectId: string, workItemId: string, body: string): Observable<WorkItemComment> {
     return this.http.post<WorkItemComment>(`${this.endpoint(organizationId, projectId)}/${workItemId}/comments`, { body });
   }
 
-  history(organizationId: string, projectId: string, workItemId: string): Observable<WorkItemPage<WorkItemHistory>> {
-    return this.http.get<WorkItemPage<WorkItemHistory>>(`${this.endpoint(organizationId, projectId)}/${workItemId}/history`);
+  history(organizationId: string, projectId: string, workItemId: string, page = 1): Observable<WorkItemPage<WorkItemHistory>> {
+    return this.http.get<WorkItemPage<WorkItemHistory>>(`${this.endpoint(organizationId, projectId)}/${workItemId}/history`, { params: new HttpParams().set('page', page).set('pageSize', 50) });
   }
 
   private endpoint(organizationId: string, projectId: string): string {

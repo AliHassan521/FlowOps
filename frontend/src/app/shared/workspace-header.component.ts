@@ -1,11 +1,12 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
+import { NotificationBellComponent } from '../features/notifications/notification-bell.component';
 
 @Component({
   selector: 'app-workspace-header',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent],
   templateUrl: './workspace-header.component.html',
   styleUrl: './workspace-header.component.css',
 })

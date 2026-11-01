@@ -35,6 +35,7 @@
         </ul>
       }
 
+      @if (organizations().length < organizationTotal()) { <button class="secondary-button" type="button" (click)="loadMoreOrganizations()" [disabled]="loadingMore()">Load more organizations</button> }
       <form class="create-form" [formGroup]="organizationForm" (ngSubmit)="createOrganization()">
         <h3>Create organization</h3>
         <label for="org-name">Name</label>
@@ -99,6 +100,7 @@
           </table>
         </div>
 
+        @if (members().length < memberTotal()) { <button class="secondary-button" type="button" (click)="loadMoreMembers()" [disabled]="loadingMore()">Load more members</button> }
         <div class="projects-heading"><div><p class="eyebrow">DELIVERY</p><h2>Projects</h2></div><span class="count">{{ projects().length }}</span></div>
         @if (canManageProjects) {
           <form class="invite-form project-form" [formGroup]="projectForm" (ngSubmit)="createProject()">
@@ -117,6 +119,7 @@
             </article>
           } @empty { <p class="empty-state">No active projects yet.</p> }
         </div>
+        @if (projects().length < projectTotal()) { <button class="secondary-button" type="button" (click)="loadMoreProjects()" [disabled]="loadingMore()">Load more projects</button> }
         @if (selectedProject(); as project) {
           <section class="project-details" aria-label="Project details">
             @if (editingProject()) {

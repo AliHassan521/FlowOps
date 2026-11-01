@@ -311,6 +311,20 @@ A notification should be persisted before or as part of the business operation a
 
 A real-time push must not be treated as the permanent record.
 
+### Implemented Phase 5 rules
+
+- Work-item creation with an assignee and reassignment notify the new assignee.
+- Status changes and comments notify the reporter and assignee. The actor is excluded, duplicates
+  are removed, and inactive accounts/memberships are skipped. Mention parsing is not implemented.
+- Notification rows and audit events share the work-item save/transaction. Event ID plus recipient
+  is unique. Failed/stale writes therefore produce no notification.
+- The authenticated inbox supports pagination, unread filtering/counts, one/all read actions,
+  and exact work-item links. Every read applies current tenant access rather than JWT role claims.
+- SignalR sends an empty invalidation hint to the authenticated recipient only. The client retrieves
+  the persisted inbox and resynchronizes after reconnecting or on its 30-second fallback interval.
+- Live push failure does not roll back committed work. There is no durable dispatch worker/outbox
+  in this phase. Future SLA/incident/release events will add their own notification policies.
+
 ---
 
 ## 9. SLA Design

@@ -6,6 +6,7 @@ namespace FlowOps.Domain.Entities;
 public sealed class WorkItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Version { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
     public Project Project { get; set; } = null!;
     public WorkItemType Type { get; set; }
@@ -24,6 +25,8 @@ public sealed class WorkItem
 
     public void SetAssignee(Guid? assigneeUserId, DateTime occurredAtUtc)
     {
+        if (assigneeUserId is null && Status is WorkItemStatus.Assigned or WorkItemStatus.InProgress)
+            throw new InvalidOperationException("An assigned or in-progress work item must retain an assignee.");
         AssigneeUserId = assigneeUserId;
         UpdatedAtUtc = occurredAtUtc;
     }

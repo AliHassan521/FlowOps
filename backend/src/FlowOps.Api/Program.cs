@@ -1,4 +1,6 @@
 using FlowOps.Api.Middleware;
+using FlowOps.Api.Hubs;
+using FlowOps.Application.Common.Interfaces;
 using FlowOps.Application.Common.Configuration;
 using FlowOps.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -26,6 +28,8 @@ builder.Services.AddOptions<JwtSettings>()
     .ValidateOnStart();
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<INotificationDispatcher, SignalRNotificationDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -130,6 +134,17 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
                                           System.Text.Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
             ClockSkew                = TimeSpan.Zero
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // Browser WebSocket/SSE transports cannot set an Authorization header.
+                if (context.Request.Path.StartsWithSegments("/api/hubs/notifications")
+                    && context.Request.Query.TryGetValue("access_token", out var token))
+                    context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -163,6 +178,19 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors("frontend");
+app.Use(async (context, next) =>
+{
+    // CORS does not enforce WebSocket origins. Apply the same exact-origin boundary to every hub transport.
+    if (context.Request.Path.StartsWithSegments("/api/hubs/notifications")
+        && ((context.Request.Headers.Origin.Count > 0
+            && !allowedOrigins.Contains(context.Request.Headers.Origin.ToString(), StringComparer.Ordinal))
+            || (context.WebSockets.IsWebSocketRequest && context.Request.Headers.Origin.Count == 0)))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+    await next(context);
+});
 app.UseRateLimiter();
 
 // 3. Authentication — reads and validates the JWT token from the request header.
@@ -196,6 +224,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 // Controller-based API endpoints
 app.MapControllers();
+app.MapHub<NotificationsHub>("/api/hubs/notifications", options => options.CloseOnAuthenticationExpiration = true);
 
 app.Run();
 

@@ -35,6 +35,7 @@ public sealed class ExceptionHandlingMiddleware
             var statusCode = ex switch
             {
                 ConflictException         => HttpStatusCode.Conflict,
+                Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => HttpStatusCode.Conflict,
                 ForbiddenException        => HttpStatusCode.Forbidden,
                 ArgumentNullException      => HttpStatusCode.BadRequest,
                 ArgumentException          => HttpStatusCode.BadRequest,
@@ -59,7 +60,8 @@ public sealed class ExceptionHandlingMiddleware
                 error   = statusCode.ToString(),
                 message = statusCode is HttpStatusCode.InternalServerError
                             ? "An unexpected error occurred. Please try again later."
-                            : ex.Message,
+                            : ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException
+                                ? "The work item changed. Refresh and try again." : ex.Message,
                 traceId = context.TraceIdentifier
             };
 

@@ -1,0 +1,30 @@
+:host { position: relative; display: block; }
+.bell { position: relative; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #e2e6ee; border-radius: .7rem; background: white; color: #55617c; cursor: pointer; }
+.badge { position: absolute; top: -.3rem; right: -.4rem; min-width: 1rem; padding: .12rem .25rem; border-radius: 1rem; background: #5952d9; color: white; font-size: .62rem; font-weight: 750; }
+.dismiss { position: fixed; inset: 0; z-index: 30; border: 0; background: transparent; cursor: default; }
+.inbox { position: absolute; right: 0; top: 3rem; z-index: 31; width: min(25rem, calc(100vw - 2rem)); border: 1px solid #dfe4ef; border-radius: 1rem; background: white; box-shadow: 0 18px 60px #14274a26; overflow: hidden; color: #263650; }
+header, .tools, footer { display: flex; justify-content: space-between; align-items: center; padding: 1rem; gap: .6rem; }
+h2 { margin: 0 0 .25rem; font-size: 1rem; }
+button { font: inherit; }
+header button, .tools button, footer button, .retry { border: 0; background: #f1f3fb; padding: .4rem .6rem; border-radius: .4rem; color: #5149c8; cursor: pointer; font-size: .75rem; }
+.connection { font-size: .7rem; color: #8a6640; }
+.connection.live { color: #27715a; }
+.tools { padding-block: .6rem; border-block: 1px solid #edf0f5; font-size: .75rem; }
+.tools label { display: flex; align-items: center; gap: .3rem; }
+.entries { max-height: min(26rem, 55vh); overflow: auto; }
+article { display: flex; align-items: center; border-bottom: 1px solid #edf0f5; }
+article.unread { background: #f4f5ff; }
+.entry { display: flex; flex: 1; text-align: left; gap: .7rem; padding: 1rem; border: 0; background: transparent; color: inherit; cursor: pointer; min-width: 0; }
+.entry strong { display: block; overflow-wrap: anywhere; font-size: .8rem; font-weight: 600; line-height: 1.5; }
+time { display: block; margin-top: .3rem; color: #75819a; font-size: .68rem; }
+small { display: block; color: #5952d9; margin-top: .3rem; font-size: .65rem; }
+.dot { flex: 0 0 .4rem; height: .4rem; margin-top: .4rem; border-radius: 50%; background: transparent; }
+.unread .dot { background: #6259e0; }
+.read { margin-right: .7rem; border: 1px solid #dde1f0; background: white; color: #5952d9; border-radius: 50%; width: 1.8rem; height: 1.8rem; cursor: pointer; }
+.empty, .error { padding: 1.2rem; margin: 0; font-size: .8rem; line-height: 1.6; color: #6a7790; }
+.error { color: #a8364c; }
+.retry { margin: 0 1rem 1rem; }
+footer { border-top: 1px solid #edf0f5; font-size: .7rem; color: #75819a; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible { outline: 3px solid #a5a0f2; outline-offset: 2px; }
+@media (max-width: 700px) { .inbox { position: fixed; top: 4.2rem; right: 1rem; } }

@@ -1,6 +1,7 @@
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { NotificationService } from '../notifications/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { OrganizationService } from '../organizations/organization.service';
 import { WorkItemService } from './work-item.service';
@@ -26,6 +27,7 @@ describe('WorkItemsComponent', () => {
       comments: vi.fn().mockReturnValue(of({ items: [], page: 1, pageSize: 50, totalCount: 0 })),
       history: vi.fn().mockReturnValue(of({ items: [], page: 1, pageSize: 50, totalCount: 0 })),
       create: vi.fn().mockReturnValue(of(item)), update: vi.fn().mockReturnValue(of(item)),
+      get: vi.fn().mockReturnValue(of(item)),
       assign: vi.fn().mockReturnValue(of(item)), transition: vi.fn().mockReturnValue(of(item)),
       addComment: vi.fn().mockReturnValue(of({})),
     };
@@ -37,7 +39,8 @@ describe('WorkItemsComponent', () => {
     TestBed.configureTestingModule({
       imports: [WorkItemsComponent],
       providers: [
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'organizationId' ? 'org-1' : 'project-1' } } } },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ organizationId: 'org-1', projectId: 'project-1' })), queryParamMap: of(convertToParamMap({})) } },
+        { provide: NotificationService, useValue: { unreadCount: () => 0, reload: vi.fn() } },
         { provide: OrganizationService, useValue: organizations },
         { provide: WorkItemService, useValue: workItems },
         { provide: AuthService, useValue: { currentUser: () => ({ userId, fullName: 'Engineer' }) } },
@@ -78,5 +81,41 @@ describe('WorkItemsComponent', () => {
     workItems['transition'].mockReturnValueOnce(throwError(() => ({ status: 403, error: {} })));
     component.transition('InProgress');
     expect(component.error()).toContain('does not allow');
+  });
+
+  it('ignores detail responses from a previously selected item', () => {
+    const fixture = TestBed.createComponent(WorkItemsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const previousComments = new Subject<unknown>();
+    const previousHistory = new Subject<unknown>();
+    workItems['comments'].mockReturnValueOnce(previousComments);
+    workItems['history'].mockReturnValueOnce(previousHistory);
+    component.open(item);
+    component.open({ ...item, id: 'item-2' });
+    previousComments.next({ items: [{ id: 'wrong-comment' }] }); previousComments.complete();
+    previousHistory.next({ items: [{ id: 'wrong-history' }] }); previousHistory.complete();
+    expect(component.selected()?.id).toBe('item-2');
+    expect(component.comments()).toEqual([]);
+    expect(component.history()).toEqual([]);
+  });
+
+  it('opens the work item referenced by a notification link', () => {
+    TestBed.overrideProvider(ActivatedRoute, { useValue: {
+      paramMap: of(convertToParamMap({ organizationId: 'org-1', projectId: 'project-1' })),
+      queryParamMap: of(convertToParamMap({ workItemId: 'item-1' })),
+    } });
+    const fixture = TestBed.createComponent(WorkItemsComponent); fixture.detectChanges();
+    expect(workItems['get']).toHaveBeenCalledWith('org-1', 'project-1', 'item-1');
+    expect(fixture.componentInstance.selected()?.id).toBe('item-1');
+  });
+
+  it('requests later comment and history pages', () => {
+    const fixture = TestBed.createComponent(WorkItemsComponent); fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.open(item); component.commentTotal.set(75); component.moveComments(1);
+    expect(workItems['comments']).toHaveBeenLastCalledWith('org-1', 'project-1', 'item-1', 2);
+    component.historyTotal.set(80); component.moveHistory(1);
+    expect(workItems['history']).toHaveBeenLastCalledWith('org-1', 'project-1', 'item-1', 2);
   });
 });

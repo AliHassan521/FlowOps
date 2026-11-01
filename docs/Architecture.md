@@ -287,7 +287,8 @@ project belongs to that organization before reading or mutating work items.
 The domain workflow owns the allowed state graph; the application service adds
 role and assignee checks before asking the entity to change state. Important
 changes and comments append `AuditEvent` rows in the same database save as the
-business change. Notifications and SignalR delivery remain later phases.
+business change. Phase 5 also queues recipient notifications in that same save, then
+sends a best-effort SignalR invalidation hint after persistence succeeds.
 
 The current state graph is `New -> Triaged -> Assigned -> InProgress ->
 CodeReview -> QA -> Resolved -> Closed`, with rework transitions from CodeReview,
@@ -295,6 +296,33 @@ QA, Resolved, and Closed back to InProgress. Assignment is required before
 Assigned or InProgress. Admins and TeamLeads may move through any valid edge;
 QA and the assigned Engineer have narrower transition permissions enforced by
 the service.
+
+Work items use an application-managed GUID concurrency token, rotated on modification.
+Overlapping requests that read the same version cannot both commit; a stale save returns 409,
+and its audit/notification writes roll back with the business change. This guards overlapping
+server operations, not arbitrary stale browser forms: expected-version/ETag contracts remain
+a possible later enhancement. Persisted DateTime properties restore UTC Kind when read so
+JSON preserves the UTC marker across SQL Server and browser round trips.
+
+### Phase 5 notification boundary
+
+- Assignment notifies the new assignee. Status changes and comments notify the reporter and assignee.
+  Recipients are distinct, active members with active accounts, excluding the actor.
+- Notifications reference the organization, project, work item and originating audit-event ID.
+  A unique event/recipient index prevents duplicate recipients for a single event.
+- Business changes, audit events and notifications persist atomically in one EF save. SignalR sends
+  happen after commit; a transport failure is logged and does not make a committed business operation appear failed.
+- The authenticated `/api/hubs/notifications` hub exposes no group-join or caller-selected user methods.
+  It uses the authenticated user identifier and sends only `NotificationsChanged` with no tenant payload.
+- `/api/notifications` reads and read-state updates enforce the recipient's current active membership,
+  account, organization, and project access. Revoked users cannot recover notification details via old JWTs.
+- The Angular client reloads authorized state after hints, reconnects and initial connection, and polls
+  every 30 seconds to recover from missed hints. Session changes clear state and stop obsolete connections.
+- Browser transport tokens are accepted in the query string only on the hub path. Hub origins are
+  checked separately from CORS, and connections close on access-token expiration. The client token factory
+  refreshes an expiring session before connecting. Production ingress must redact token-bearing URLs.
+- Real-time delivery is best effort on one API instance. Durable outbox dispatch and a scale-out backplane
+  are not part of Phase 5; persisted notifications remain available without live delivery.
 
 ---
 

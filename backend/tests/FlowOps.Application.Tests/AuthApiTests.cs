@@ -24,7 +24,7 @@ using Xunit;
 
 namespace FlowOps.Application.Tests;
 
-public sealed class AuthApiTests : IDisposable
+public sealed partial class AuthApiTests : IDisposable
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private readonly AuthApiFactory _factory;

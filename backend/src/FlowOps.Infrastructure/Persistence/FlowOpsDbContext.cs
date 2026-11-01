@@ -1,5 +1,6 @@
 using FlowOps.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FlowOps.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ public class FlowOpsDbContext : DbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         EnsureAuditEventsAreAppendOnly();
+        UpdateWorkItemVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -21,6 +23,7 @@ public class FlowOpsDbContext : DbContext
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         EnsureAuditEventsAreAppendOnly();
+        UpdateWorkItemVersions();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
@@ -34,11 +37,24 @@ public class FlowOpsDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<WorkItemComment> WorkItemComments => Set<WorkItemComment>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(FlowOpsDbContext).Assembly);
+        var utcConverter = new ValueConverter<DateTime, DateTime>(value => value,
+            value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        foreach (var property in entity.GetProperties())
+            if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                property.SetValueConverter(utcConverter);
+    }
+
+    private void UpdateWorkItemVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<WorkItem>().Where(entry => entry.State == EntityState.Modified))
+            entry.Entity.Version = Guid.NewGuid();
     }
 
     private void EnsureAuditEventsAreAppendOnly()

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Services;
 
-public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemService
+public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationService notifications) : IWorkItemService
 {
     private const int MaximumPageSize = 100;
     private const int MaximumTitleLength = 200;
@@ -51,9 +51,13 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
             CreatedAtUtc = now
         };
         dbContext.WorkItems.Add(workItem);
-        AddAudit(organizationId, actorUserId, "WorkItem.Created", workItem.Id,
+        var createdEvent = AddAudit(organizationId, actorUserId, "WorkItem.Created", workItem.Id,
             JsonSerializer.Serialize(new { type = type.ToString(), priority = priority.ToString(), workItem.AssigneeUserId }));
+        if (workItem.AssigneeUserId is Guid assignee)
+            await notifications.QueueWorkItemAsync(actorUserId, organizationId, projectId, workItem.Id,
+                createdEvent.Id, "WorkItem.Assigned", workItem.Title, [assignee], cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await notifications.PublishPendingAsync();
         return await GetResponseAsync(workItem.Id, cancellationToken);
     }
 
@@ -169,10 +173,15 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
         }
 
         var previousAssigneeId = workItem.AssigneeUserId;
-        workItem.SetAssignee(request.AssigneeUserId, DateTime.UtcNow);
-        AddAudit(organizationId, actorUserId, "WorkItem.Assigned", workItemId,
+        try { workItem.SetAssignee(request.AssigneeUserId, DateTime.UtcNow); }
+        catch (InvalidOperationException exception) { throw new ConflictException(exception.Message); }
+        var assignedEvent = AddAudit(organizationId, actorUserId, "WorkItem.Assigned", workItemId,
             JsonSerializer.Serialize(new { previousAssigneeUserId = previousAssigneeId, workItem.AssigneeUserId }));
+        if (workItem.AssigneeUserId is Guid assignee)
+            await notifications.QueueWorkItemAsync(actorUserId, organizationId, projectId, workItemId,
+                assignedEvent.Id, "WorkItem.Assigned", workItem.Title, [assignee], cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await notifications.PublishPendingAsync();
         return await GetResponseAsync(workItemId, cancellationToken, projectId);
     }
 
@@ -194,9 +203,13 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
             throw new ConflictException(exception.Message);
         }
 
-        AddAudit(organizationId, actorUserId, "WorkItem.StatusChanged", workItemId,
+        var statusEvent = AddAudit(organizationId, actorUserId, "WorkItem.StatusChanged", workItemId,
             JsonSerializer.Serialize(new { from = previousStatus.ToString(), to = nextStatus.ToString() }));
+        await notifications.QueueWorkItemAsync(actorUserId, organizationId, projectId, workItemId,
+            statusEvent.Id, "WorkItem.StatusChanged", workItem.Title,
+            new[] { workItem.ReporterUserId }.Concat(workItem.AssigneeUserId is Guid assigned ? [assigned] : []), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await notifications.PublishPendingAsync();
         return await GetResponseAsync(workItemId, cancellationToken, projectId);
     }
 
@@ -223,7 +236,7 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
         var membership = await GetMembershipAsync(actorUserId, organizationId, cancellationToken);
         EnsureCanWrite(membership);
         await EnsureActiveProjectAsync(organizationId, projectId, cancellationToken);
-        await EnsureWorkItemExistsAsync(projectId, workItemId, cancellationToken);
+        var workItem = await GetTrackedWorkItemAsync(projectId, workItemId, cancellationToken);
         if (string.IsNullOrWhiteSpace(request.Body) || request.Body.Trim().Length > MaximumCommentLength)
         {
             throw new ArgumentException($"Comment must contain 1-{MaximumCommentLength} characters.");
@@ -238,9 +251,13 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
             CreatedAtUtc = now
         };
         dbContext.WorkItemComments.Add(comment);
-        AddAudit(organizationId, actorUserId, "WorkItem.CommentAdded", workItemId,
+        var commentEvent = AddAudit(organizationId, actorUserId, "WorkItem.CommentAdded", workItemId,
             JsonSerializer.Serialize(new { comment.Id }));
+        await notifications.QueueWorkItemAsync(actorUserId, organizationId, projectId, workItemId,
+            commentEvent.Id, "WorkItem.CommentAdded", workItem.Title,
+            new[] { workItem.ReporterUserId }.Concat(workItem.AssigneeUserId is Guid assigned ? [assigned] : []), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await notifications.PublishPendingAsync();
         return await dbContext.WorkItemComments.AsNoTracking()
             .Where(item => item.Id == comment.Id)
             .Select(item => new WorkItemCommentResponse(item.Id, item.AuthorUserId, item.Author.FullName, item.Body, item.CreatedAtUtc))
@@ -375,8 +392,9 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
         }
     }
 
-    private void AddAudit(Guid organizationId, Guid actorUserId, string action, Guid workItemId, string? detailsJson) =>
-        dbContext.AuditEvents.Add(new AuditEvent
+    private AuditEvent AddAudit(Guid organizationId, Guid actorUserId, string action, Guid workItemId, string? detailsJson)
+    {
+        var auditEvent = new AuditEvent
         {
             OrganizationId = organizationId,
             ActorUserId = actorUserId,
@@ -385,7 +403,10 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext) : IWorkItemServi
             EntityId = workItemId,
             DetailsJson = detailsJson,
             OccurredAtUtc = DateTime.UtcNow
-        });
+        };
+        dbContext.AuditEvents.Add(auditEvent);
+        return auditEvent;
+    }
 
     private static IOrderedQueryable<WorkItem> ApplyOrdering(IQueryable<WorkItem> query, string sortBy, string sortDirection)
     {

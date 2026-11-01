@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/config/api.config';
@@ -9,8 +9,8 @@ export class OrganizationService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = `${API_BASE_URL}/organizations`;
 
-  list(): Observable<PagedResponse<Organization>> {
-    return this.http.get<PagedResponse<Organization>>(this.endpoint);
+  list(page = 1): Observable<PagedResponse<Organization>> {
+    return this.http.get<PagedResponse<Organization>>(this.endpoint, { params: this.pageParams(page) });
   }
 
   get(organizationId: string): Observable<Organization> {
@@ -29,8 +29,8 @@ export class OrganizationService {
     return this.http.delete<void>(`${this.endpoint}/${organizationId}`);
   }
 
-  members(organizationId: string): Observable<PagedResponse<OrganizationMember>> {
-    return this.http.get<PagedResponse<OrganizationMember>>(`${this.endpoint}/${organizationId}/members`);
+  members(organizationId: string, page = 1): Observable<PagedResponse<OrganizationMember>> {
+    return this.http.get<PagedResponse<OrganizationMember>>(`${this.endpoint}/${organizationId}/members`, { params: this.pageParams(page) });
   }
 
   addMember(organizationId: string, email: string, role: string): Observable<OrganizationMember> {
@@ -46,8 +46,8 @@ export class OrganizationService {
     return this.http.delete<void>(`${this.endpoint}/${organizationId}/members/${member.userId}`);
   }
 
-  projects(organizationId: string): Observable<PagedResponse<Project>> {
-    return this.http.get<PagedResponse<Project>>(`${this.endpoint}/${organizationId}/projects`);
+  projects(organizationId: string, page = 1): Observable<PagedResponse<Project>> {
+    return this.http.get<PagedResponse<Project>>(`${this.endpoint}/${organizationId}/projects`, { params: this.pageParams(page) });
   }
 
   createProject(organizationId: string, input: { name: string; key: string; description: string | null }): Observable<Project> {
@@ -64,5 +64,9 @@ export class OrganizationService {
 
   deactivateProject(organizationId: string, project: Project): Observable<void> {
     return this.http.delete<void>(`${this.endpoint}/${organizationId}/projects/${project.id}`);
+  }
+
+  private pageParams(page: number): HttpParams {
+    return page === 1 ? new HttpParams() : new HttpParams().set('page', page).set('pageSize', 50);
   }
 }

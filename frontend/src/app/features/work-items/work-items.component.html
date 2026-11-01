@@ -5,18 +5,21 @@
   @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
   @if (notice()) { <p class="notice success" role="status">{{ notice() }}</p> }
 
+  @if (canComment) {
   <section class="create-panel" aria-labelledby="create-heading">
     <div class="section-title"><div><p class="eyebrow">START WITH THE OUTCOME</p><h2 id="create-heading">Create work item</h2></div><span class="subtle">Required fields are marked</span></div>
     <form [formGroup]="createForm" (ngSubmit)="create()" class="create-grid">
       <label>Type<select formControlName="type">@for (type of types; track type) { <option [value]="type">{{ type }}</option> }</select></label>
-      <label class="title-field">Title<input formControlName="title" maxlength="200" placeholder="What needs to get done?" />@if (createForm.controls.title.touched && createForm.controls.title.invalid) { <small class="field-error">Enter a title between 3 and 200 characters.</small> }</label>
+      <label class="title-field">Title<input formControlName="title" maxlength="200" placeholder="What needs to get done?" />@if (createForm.controls.title.touched && createForm.controls.title.invalid) { <small class="field-error">Enter a title between 2 and 200 characters.</small> }</label>
       <label>Priority<select formControlName="priority">@for (priority of priorities; track priority) { <option [value]="priority">{{ priority }}</option> }</select></label>
-      <label>Description<textarea formControlName="description" rows="2" maxlength="5000" placeholder="Context, acceptance notes, or reproduction steps"></textarea></label>
+      <label>Description<textarea formControlName="description" rows="2" maxlength="8000" placeholder="Context, acceptance notes, or reproduction steps"></textarea></label>
       <label>Assignee<select formControlName="assigneeUserId"><option value="">Unassigned</option>@for (member of members(); track member.userId) { <option [value]="member.userId">{{ member.fullName }} · {{ member.role }}</option> }</select></label>
       <label>Due date<input type="datetime-local" formControlName="dueAtUtc" /></label>
       <div class="create-actions"><button class="primary-button" type="submit" [disabled]="saving() || createForm.invalid">{{ saving() ? 'Creating…' : 'Create item' }}</button></div>
     </form>
+    @if (moreMembers()) { <button class="quiet-button" type="button" (click)="loadMoreMembers()" [disabled]="loadingMembers()">Load more assignees</button> }
   </section>
+  }
 
   <section class="board-panel" aria-labelledby="items-heading">
     <div class="section-title"><div><p class="eyebrow">PROJECT BACKLOG</p><h2 id="items-heading">Work items</h2></div><button class="quiet-button" type="button" (click)="load()" [disabled]="loading()">Refresh</button></div>
@@ -64,7 +67,8 @@
           @for (comment of comments(); track comment.id) { <article class="comment"><div class="comment-avatar">{{ comment.authorName.slice(0, 1) }}</div><div><strong>{{ comment.authorName }}</strong><time>{{ comment.createdAtUtc | date:'medium' }}</time><p>{{ comment.body }}</p></div></article> } @empty { <p class="subtle">No comments yet. Add context or a progress update.</p> }
           @if (canComment) { <form class="comment-form" [formGroup]="commentForm" (ngSubmit)="addComment()"><label class="sr-only" for="comment-body">Add a comment</label><textarea id="comment-body" formControlName="body" rows="2" maxlength="4000" placeholder="Write a comment…"></textarea><button class="primary-button" type="submit" [disabled]="commentForm.invalid">Comment</button></form> }
         </section>
-        <details class="history-section"><summary>Activity history <span>{{ history().length }}</span></summary><ol>@for (entry of history(); track entry.id) { <li><span class="history-dot"></span><div><strong>{{ entry.actorName }}</strong> {{ entry.action }}<time>{{ entry.occurredAtUtc | date:'medium' }}</time></div></li> } @empty { <li class="subtle">No history is available.</li> }</ol></details>
+        @if (commentTotal() > 50) { <div class="pagination"><button type="button" class="secondary-button" (click)="moveComments(-1)" [disabled]="commentPage() <= 1 || detailLoading()">Previous comments</button><span>Page {{ commentPage() }}</span><button type="button" class="secondary-button" (click)="moveComments(1)" [disabled]="commentPage() * 50 >= commentTotal() || detailLoading()">Next comments</button></div> }
+        <details class="history-section"><summary>Activity history <span>{{ historyTotal() }}</span></summary><ol>@for (entry of history(); track entry.id) { <li><span class="history-dot"></span><div><strong>{{ entry.actorName }}</strong> {{ entry.action }}<time>{{ entry.occurredAtUtc | date:'medium' }}</time></div></li> } @empty { <li class="subtle">No history is available.</li> }</ol>@if (historyTotal() > 50) { <div class="pagination"><button type="button" class="secondary-button" (click)="moveHistory(-1)" [disabled]="historyPage() <= 1 || detailLoading()">Previous activity</button><span>Page {{ historyPage() }}</span><button type="button" class="secondary-button" (click)="moveHistory(1)" [disabled]="historyPage() * 50 >= historyTotal() || detailLoading()">Next activity</button></div> }</details>
       </section>
     </div>
   }

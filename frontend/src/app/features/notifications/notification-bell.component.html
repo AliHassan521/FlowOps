@@ -1,0 +1,21 @@
+<button class="bell" type="button" (click)="toggle()" [attr.aria-expanded]="opened()" aria-controls="notification-inbox" [attr.aria-label]="'Notifications, ' + inbox.unreadCount() + ' unread'">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
+  @if (inbox.unreadCount() > 0) { <span class="badge">{{ inbox.unreadCount() > 99 ? '99+' : inbox.unreadCount() }}</span> }
+</button>
+@if (opened()) {
+  <button class="dismiss" type="button" aria-label="Close notifications" (click)="close()"></button>
+  <section id="notification-inbox" class="inbox" aria-label="Notifications">
+    <header><div><h2>Notifications</h2><span class="connection" [class.live]="inbox.status() === 'live'">{{ inbox.status() === 'live' ? 'Live updates' : inbox.status() === 'reconnecting' || inbox.status() === 'connecting' ? 'Connecting…' : 'Updates may be delayed' }}</span></div><button type="button" (click)="close()" aria-label="Close notifications">×</button></header>
+    <div class="tools"><label><input type="checkbox" [checked]="inbox.unreadOnly()" (change)="inbox.filterUnread($any($event.target).checked)" /> Unread only</label><button type="button" (click)="inbox.markAllRead()" [disabled]="inbox.unreadCount() === 0">Mark all read</button></div>
+    @if (inbox.error()) { <p class="error" role="alert">{{ inbox.error() }}</p><button class="retry" type="button" (click)="inbox.reload()">Try again</button> }
+    @else if (inbox.loading() && inbox.items().length === 0) { <p class="empty" role="status">Loading notifications…</p> }
+    @else {
+      <div class="entries">
+        @for (notification of inbox.items(); track notification.id) {
+          <article [class.unread]="!notification.readAtUtc"><button class="entry" type="button" (click)="open(notification)"><span class="dot" aria-hidden="true"></span><span><strong>{{ notification.message }}</strong><time>{{ notification.createdAtUtc | date:'medium' }}</time>@if (!notification.readAtUtc) { <small>Unread</small> }</span></button>@if (!notification.readAtUtc) { <button class="read" type="button" (click)="inbox.markRead(notification.id)" [attr.aria-label]="'Mark as read: ' + notification.message">✓</button> }</article>
+        } @empty { <p class="empty">{{ inbox.unreadOnly() ? 'You’re all caught up.' : 'No notifications yet. Assignments, status changes, and comments will appear here.' }}</p> }
+      </div>
+      <footer><button type="button" (click)="inbox.movePage(-1)" [disabled]="inbox.page() <= 1 || inbox.loading()">Previous</button><span>{{ inbox.page() }} / {{ inbox.pages() }}</span><button type="button" (click)="inbox.movePage(1)" [disabled]="inbox.page() >= inbox.pages() || inbox.loading()">Next</button></footer>
+    }
+  </section>
+}
