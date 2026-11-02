@@ -227,6 +227,17 @@ public sealed class AuthenticationTests : IDisposable
         _connection.Dispose();
     }
 
+    [Fact]
+    public async Task Logout_with_a_rotated_cookie_revokes_the_whole_family_but_not_other_sessions()
+    {
+        var original = await _authService.RegisterAsync(new RegisterRequest("logout-race@example.test", "Test User", "correct horse battery"));
+        var independent = await _authService.LoginAsync(new LoginRequest("logout-race@example.test", "correct horse battery"));
+        var replacement = await _authService.RefreshAsync(original.RefreshToken);
+        await _authService.RevokeRefreshTokenAsync(original.RefreshToken);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _authService.RefreshAsync(replacement.RefreshToken));
+        Assert.NotNull(await _authService.RefreshAsync(independent.RefreshToken));
+    }
+
     private sealed class TestJwtTokenService : IJwtTokenService
     {
         public string GenerateToken(Guid userId, string email, IEnumerable<string> roles) =>

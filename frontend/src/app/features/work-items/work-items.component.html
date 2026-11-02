@@ -13,7 +13,9 @@
       <label class="title-field">Title<input formControlName="title" maxlength="200" placeholder="What needs to get done?" />@if (createForm.controls.title.touched && createForm.controls.title.invalid) { <small class="field-error">Enter a title between 2 and 200 characters.</small> }</label>
       <label>Priority<select formControlName="priority">@for (priority of priorities; track priority) { <option [value]="priority">{{ priority }}</option> }</select></label>
       <label>Description<textarea formControlName="description" rows="2" maxlength="8000" placeholder="Context, acceptance notes, or reproduction steps"></textarea></label>
+      @if (canManage) {
       <label>Assignee<select formControlName="assigneeUserId"><option value="">Unassigned</option>@for (member of members(); track member.userId) { <option [value]="member.userId">{{ member.fullName }} · {{ member.role }}</option> }</select></label>
+      }
       <label>Due date<input type="datetime-local" formControlName="dueAtUtc" /></label>
       <div class="create-actions"><button class="primary-button" type="submit" [disabled]="saving() || createForm.invalid">{{ saving() ? 'Creating…' : 'Create item' }}</button></div>
     </form>

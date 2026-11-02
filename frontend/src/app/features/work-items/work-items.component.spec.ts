@@ -73,6 +73,23 @@ describe('WorkItemsComponent', () => {
     expect(component.selected()?.id).toBe(item.id);
   });
 
+  it('does not offer creation assignment to engineers and drops an injected form assignee', () => {
+    const fixture = TestBed.createComponent(WorkItemsComponent); fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelector('.create-grid select[formControlName="assigneeUserId"]')).toBeNull();
+    component.createForm.setValue({ type: 'Task', title: 'Permission probe', description: '', priority: 'High', assigneeUserId: 'admin-id', dueAtUtc: '' });
+    component.create();
+    expect(workItems['create']).toHaveBeenCalledWith('org-1', 'project-1', expect.objectContaining({ assigneeUserId: null }));
+  });
+
+  it('renders attacker-controlled work item text without creating HTML elements', () => {
+    const payload = '<img src=x onerror=alert(1)>';
+    workItems['list'].mockReturnValue(of({ items: [{ ...item, title: payload }], page: 1, pageSize: 20, totalCount: 1 }));
+    const fixture = TestBed.createComponent(WorkItemsComponent); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(payload);
+    expect(fixture.nativeElement.querySelector('img[onerror]')).toBeNull();
+  });
+
   it('shows transition actions only for the assigned engineer and handles a server denial', () => {
     const fixture = TestBed.createComponent(WorkItemsComponent);
     fixture.detectChanges();

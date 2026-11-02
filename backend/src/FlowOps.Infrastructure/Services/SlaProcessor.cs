@@ -7,11 +7,13 @@ namespace FlowOps.Infrastructure.Services;
 
 public sealed class SlaProcessor(FlowOpsDbContext db, INotificationService notifications, TimeProvider clock) : ISlaProcessor
 {
-    public async Task<IReadOnlyList<Guid>> GetDueIdsAsync(int batchSize, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Guid>> GetDueIdsAsync(int batchSize, CancellationToken cancellationToken, IReadOnlyCollection<Guid>? excludedIds = null)
     {
         if (batchSize is < 1 or > 500) throw new ArgumentException("SLA batch size must be 1–500.");
         var now = clock.GetUtcNow().UtcDateTime;
+        var excluded = excludedIds?.ToArray() ?? [];
         return await db.WorkItemSlas.AsNoTracking().Where(s => s.CompletedAtUtc == null && s.BreachedAtUtc == null
+            && !excluded.Contains(s.Id)
             && s.WorkItem.Project.IsActive && s.WorkItem.Project.Organization.IsActive
             && s.WorkItem.Status != WorkItemStatus.Resolved && s.WorkItem.Status != WorkItemStatus.Closed
             && (s.DeadlineAtUtc <= now || (s.WarningAtUtc != null && s.WarningAtUtc <= now && s.WarnedAtUtc == null)))

@@ -69,4 +69,51 @@ describe('AuthService', () => {
 
     expect(service.isAuthenticated).toBe(false);
   });
+
+  it('serializes logout after an in-flight refresh and never resurrects the local session', () => {
+    service.login({ email: response.email, password: 'correct horse battery' }).subscribe();
+    http.expectOne(`${API_BASE_URL}/auth/login`).flush(response);
+    service.refresh().subscribe({ error: () => {} });
+    const refresh = http.expectOne(`${API_BASE_URL}/auth/refresh`);
+    service.logout().subscribe();
+    expect(service.isAuthenticated).toBe(false);
+    http.expectNone(`${API_BASE_URL}/auth/logout`);
+    refresh.flush({ ...response, accessToken: 'late-refresh-token' });
+    expect(service.isAuthenticated).toBe(false);
+    http.expectOne(`${API_BASE_URL}/auth/logout`).flush(null);
+    expect(service.isAuthenticated).toBe(false);
+  });
+
+  it('orders a new login after a stale refresh and accepts only the new identity', () => {
+    service.refresh().subscribe({ error: () => {} });
+    const refresh = http.expectOne(`${API_BASE_URL}/auth/refresh`);
+    service.login({ email: 'other@example.test', password: 'correct horse battery' }).subscribe();
+    http.expectNone(`${API_BASE_URL}/auth/login`);
+    refresh.flush(response);
+    expect(service.isAuthenticated).toBe(false);
+    http.expectOne(`${API_BASE_URL}/auth/login`).flush({ ...response, userId: 'other-user' });
+    expect(service.currentUser()?.userId).toBe('other-user');
+  });
+
+  it('finishes a cookie request after unsubscription and orders logout after a failed refresh', () => {
+    const subscription = service.refresh().subscribe({ error: () => {} });
+    const refresh = http.expectOne(`${API_BASE_URL}/auth/refresh`);
+    subscription.unsubscribe();
+    expect(refresh.cancelled).toBe(false);
+    service.logout().subscribe();
+    http.expectNone(`${API_BASE_URL}/auth/logout`);
+    refresh.flush({}, { status: 503, statusText: 'Unavailable' });
+    http.expectOne(`${API_BASE_URL}/auth/logout`).flush(null);
+    expect(service.isAuthenticated).toBe(false);
+  });
+
+  it('an older logout response cannot clear a subsequently requested login', () => {
+    service.logout().subscribe();
+    const logout = http.expectOne(`${API_BASE_URL}/auth/logout`);
+    service.login({ email: response.email, password: 'correct horse battery' }).subscribe();
+    http.expectNone(`${API_BASE_URL}/auth/login`);
+    logout.flush(null);
+    http.expectOne(`${API_BASE_URL}/auth/login`).flush(response);
+    expect(service.accessToken).toBe(response.accessToken);
+  });
 });

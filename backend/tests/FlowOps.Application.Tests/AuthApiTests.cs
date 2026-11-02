@@ -19,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
@@ -127,8 +129,8 @@ public sealed partial class AuthApiTests : IDisposable
             issuer: "FlowOps.Api.Tests",
             audience: "FlowOps.Client.Tests",
             claims: [new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())],
-            notBefore: DateTime.UtcNow.AddMinutes(-3),
-            expires: DateTime.UtcNow.AddMinutes(-1),
+            notBefore: _factory.AuthenticationTimeUtc.AddMinutes(-3),
+            expires: _factory.AuthenticationTimeUtc.AddMinutes(-1),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
         var expiredToken = new JwtSecurityTokenHandler().WriteToken(expiredJwt);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", expiredToken);
@@ -719,6 +721,9 @@ public sealed partial class AuthApiTests : IDisposable
         internal const string TestJwtSecret = "integration-test-secret-key-with-at-least-32-characters";
         private readonly SqliteConnection _connection;
         internal ManualTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
+        // Freeze only JWT validation time, independently of SLA time travel and
+        // desktop suspension. Signature/issuer/audience checks remain enabled.
+        internal DateTime AuthenticationTimeUtc { get; } = DateTime.UtcNow;
 
         public AuthApiFactory(SqliteConnection connection)
         {
@@ -739,6 +744,7 @@ public sealed partial class AuthApiTests : IDisposable
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
+            builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IDbContextOptionsConfiguration<FlowOpsDbContext>>();
@@ -747,6 +753,10 @@ public sealed partial class AuthApiTests : IDisposable
                 services.AddDbContext<FlowOpsDbContext>(options => options.UseSqlite(_connection));
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton<TimeProvider>(Clock);
+                services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+                    options.TokenValidationParameters.LifetimeValidator = (notBefore, expires, _, _) =>
+                        expires.HasValue && expires.Value > AuthenticationTimeUtc
+                        && (!notBefore.HasValue || notBefore.Value <= AuthenticationTimeUtc));
             });
         }
     }

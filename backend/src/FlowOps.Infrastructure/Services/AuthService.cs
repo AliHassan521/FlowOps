@@ -20,7 +20,7 @@ public sealed class AuthService : IAuthService
     private const int RefreshTokenBytes = 64;
     private const int MaximumEmailLength = 256;
     private const int MaximumPasswordLength = 1024;
-    private const string DummyPasswordHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+    private const string DummyPasswordHash = "$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
     private readonly FlowOpsDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
@@ -153,18 +153,7 @@ public sealed class AuthService : IAuthService
             throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
         }
 
-        if (storedToken.RevokedAtUtc.HasValue)
-        {
-            // A rotated token being presented again is evidence that a copied
-            // refresh token may have been stolen. Revoke only this login family.
-            await _dbContext.RefreshTokens
-                .Where(token => token.FamilyId == storedToken.FamilyId && token.RevokedAtUtc == null)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedAtUtc, now), cancellationToken);
-
-            throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
-        }
-
-        if (storedToken.ExpiresAtUtc <= now || !storedToken.User.IsActive)
+        if ((!storedToken.RevokedAtUtc.HasValue && storedToken.ExpiresAtUtc <= now) || !storedToken.User.IsActive)
         {
             throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
         }
@@ -182,16 +171,26 @@ public sealed class AuthService : IAuthService
         var replacementToken = GenerateRefreshToken();
         var replacementHash = HashRefreshToken(replacementToken);
 
-        // The predicate makes rotation single-use even when two requests race.
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // Updating this stable family row takes a write lock until commit. Every
+        // rotation/logout uses the same lock before touching any token rows.
+        var locked = await _dbContext.RefreshSessions
+            .Where(session => session.Id == storedToken.FamilyId && session.UserId == storedToken.UserId
+                && session.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.LockStamp, Guid.NewGuid()), cancellationToken);
+        if (locked != 1)
+            throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
+
         var revokedCount = await _dbContext.RefreshTokens
             .Where(token => token.Id == storedToken.Id && token.RevokedAtUtc == null)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(token => token.RevokedAtUtc, now)
                 .SetProperty(token => token.ReplacedByTokenHash, replacementHash), cancellationToken);
-
         if (revokedCount != 1)
         {
+            // Commit revocation even when the replay raced a successful rotation.
+            await RevokeFamilyAsync(storedToken.FamilyId, now, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
         }
 
@@ -221,9 +220,22 @@ public sealed class AuthService : IAuthService
         }
 
         var tokenHash = HashRefreshToken(refreshToken);
-        await _dbContext.RefreshTokens
-            .Where(token => token.TokenHash == tokenHash && token.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedAtUtc, DateTime.UtcNow), cancellationToken);
+        var familyId = await _dbContext.RefreshTokens.AsNoTracking()
+            .Where(token => token.TokenHash == tokenHash).Select(token => (Guid?)token.FamilyId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (familyId is null) return;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await RevokeFamilyAsync(familyId.Value, DateTime.UtcNow, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task RevokeFamilyAsync(Guid familyId, DateTime now, CancellationToken cancellationToken)
+    {
+        // Lock the family first, matching refresh's lock order.
+        await _dbContext.RefreshSessions.Where(session => session.Id == familyId && session.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, now), cancellationToken);
+        await _dbContext.RefreshTokens.Where(token => token.FamilyId == familyId && token.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedAtUtc, now), cancellationToken);
     }
 
     private async Task<AuthSession> CreateSessionAsync(
@@ -233,10 +245,12 @@ public sealed class AuthService : IAuthService
     {
         var refreshToken = GenerateRefreshToken();
         var now = DateTime.UtcNow;
+        var family = new RefreshSession { UserId = user.Id, CreatedAtUtc = now };
+        _dbContext.RefreshSessions.Add(family);
         var storedToken = new RefreshToken
         {
             UserId = user.Id,
-            FamilyId = Guid.NewGuid(),
+            FamilyId = family.Id,
             TokenHash = HashRefreshToken(refreshToken),
             CreatedAtUtc = now,
             ExpiresAtUtc = now.AddDays(_jwtSettings.RefreshTokenDays)

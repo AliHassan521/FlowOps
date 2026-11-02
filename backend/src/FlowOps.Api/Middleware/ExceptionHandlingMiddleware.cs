@@ -34,6 +34,8 @@ public sealed class ExceptionHandlingMiddleware
             // Decide the HTTP status code based on exception type.
             var statusCode = ex switch
             {
+                BadHttpRequestException requestException when requestException.StatusCode is >= 400 and < 500
+                    => (HttpStatusCode)requestException.StatusCode,
                 ConflictException         => HttpStatusCode.Conflict,
                 Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => HttpStatusCode.Conflict,
                 ForbiddenException        => HttpStatusCode.Forbidden,
@@ -60,6 +62,7 @@ public sealed class ExceptionHandlingMiddleware
                 error   = statusCode.ToString(),
                 message = statusCode is HttpStatusCode.InternalServerError
                             ? "An unexpected error occurred. Please try again later."
+                            : ex is BadHttpRequestException ? "The HTTP request was rejected."
                             : ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException
                                 ? "The resource changed. Refresh and try again." : ex.Message,
                 traceId = context.TraceIdentifier

@@ -36,6 +36,32 @@ public sealed class SlaWorkerTests
         Assert.Empty(state.Processed);
     }
 
+    [Fact]
+    public async Task A_failing_first_record_does_not_starve_later_records_when_batch_size_is_one()
+    {
+        var state = new State(); var services = new ServiceCollection(); services.AddSingleton(state); services.AddScoped<ISlaProcessor, Processor>();
+        await using var provider = services.BuildServiceProvider();
+        using var worker = new SlaMonitorWorker(provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new SlaWorkerOptions { BatchSize = 1 }), TimeProvider.System, NullLogger<SlaMonitorWorker>.Instance);
+        Assert.Equal(0, await worker.RunOnceAsync(default));
+        Assert.Equal(1, await worker.RunOnceAsync(default));
+        Assert.Equal(new[] { state.Ids[0], state.Ids[1] }, state.Processed);
+    }
+
+    [Fact]
+    public async Task A_failed_record_is_retried_after_its_cooldown()
+    {
+        var state = new State(); var services = new ServiceCollection(); services.AddSingleton(state); services.AddScoped<ISlaProcessor, Processor>();
+        await using var provider = services.BuildServiceProvider();
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        using var worker = new SlaMonitorWorker(provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new SlaWorkerOptions { BatchSize = 1 }), clock, NullLogger<SlaMonitorWorker>.Instance);
+        await worker.RunOnceAsync(default);
+        clock.Advance(TimeSpan.FromMinutes(2));
+        await worker.RunOnceAsync(default);
+        Assert.Equal(new[] { state.Ids[0], state.Ids[0] }, state.Processed);
+    }
+
     private sealed class State
     {
         public Guid[] Ids { get; } = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()];
@@ -46,10 +72,10 @@ public sealed class SlaWorkerTests
     {
         private readonly State state;
         public Processor(State state) { this.state = state; state.Scopes++; }
-        public Task<IReadOnlyList<Guid>> GetDueIdsAsync(int batchSize, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<Guid>> GetDueIdsAsync(int batchSize, CancellationToken cancellationToken, IReadOnlyCollection<Guid>? excludedIds = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<IReadOnlyList<Guid>>(state.Ids.Take(batchSize).ToArray());
+            return Task.FromResult<IReadOnlyList<Guid>>(state.Ids.Where(id => excludedIds?.Contains(id) != true).Take(batchSize).ToArray());
         }
         public Task<bool> ProcessOneAsync(Guid slaId, CancellationToken cancellationToken)
         {

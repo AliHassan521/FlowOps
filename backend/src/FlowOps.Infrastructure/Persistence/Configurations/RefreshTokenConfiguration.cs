@@ -23,6 +23,8 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property(token => token.ExpiresAtUtc).IsRequired();
 
         builder.Property(token => token.FamilyId).IsRequired();
+        builder.HasOne<RefreshSession>().WithMany().HasForeignKey(token => token.FamilyId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(token => token.ReplacedByTokenHash)
             .HasMaxLength(64);

@@ -34,6 +34,8 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationSer
         var dueAtUtc = NormalizeUtc(request.DueAtUtc, "dueAtUtc");
         if (request.AssigneeUserId.HasValue)
         {
+            if (membership.Role.Name is not (Admin or TeamLead))
+                throw new ForbiddenException("Only an admin or team lead can assign work items.");
             await EnsureAssignableMemberAsync(organizationId, request.AssigneeUserId.Value, cancellationToken);
         }
 

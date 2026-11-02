@@ -38,7 +38,7 @@ Phases 2 through 6 have working local implementations; learning sign-off is pend
 
 The automated API tests use SQLite in memory, including a real SignalR test-server connection.
 All ten SQL Server migrations were applied to the configured `FlowOpsDb` database and
-the isolated `FlowOpsPhase3Validation` database. Coverage currently has 65 backend tests and 47 Angular tests.
+the isolated `FlowOpsPhase3Validation` database. Coverage currently has 119 backend tests and 58 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
 vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
 A live SQL Server and SignalR smoke flow verified notification delivery, offline recovery,
@@ -163,3 +163,12 @@ $env:SlaWorker__BatchSize = '10'
 Then run `node backend/tests/phase6-smoke.cjs` in a second terminal. It deliberately waits for a real
 two-minute SLA, creates only synthetic local data, and soft-deactivates its test workspace afterward.
 See [Phase 6 verification](docs/Phase6Verification.md) for lifecycle, concurrency, and operational limits.
+
+## Adversarial security review
+
+See [the verification report](docs/AdversarialVerification.md) for reproduced problems, fixes,
+SQL Server race and migration tests, HTTP security checks, commands and remaining production gates.
+Refresh/logout now serialize per login family; apply all eleven migrations before running this version.
+Logout clears the local session immediately and revokes the refresh family. Active bearer tokens
+expire on their normal short lifetime; disabling an account rejects new authenticated requests.
+SLA failures receive a bounded retry cooldown so later records can proceed.

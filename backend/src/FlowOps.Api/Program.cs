@@ -12,6 +12,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using FlowOps.Infrastructure.Persistence;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -142,6 +145,15 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
         options.Events = new JwtBearerEvents
         {
+            OnTokenValidated = async context =>
+            {
+                var subject = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var db = context.HttpContext.RequestServices.GetRequiredService<FlowOpsDbContext>();
+                if (!Guid.TryParse(subject, out var userId)
+                    || !await db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive,
+                        context.HttpContext.RequestAborted))
+                    context.Fail("The account is unavailable.");
+            },
             OnMessageReceived = context =>
             {
                 // Browser WebSocket/SSE transports cannot set an Authorization header.

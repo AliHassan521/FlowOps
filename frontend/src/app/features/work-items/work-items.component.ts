@@ -127,7 +127,7 @@ export class WorkItemsComponent implements OnInit {
     const value = this.createForm.getRawValue(); this.saving.set(true); this.error.set('');
     this.api.create(this.organizationId, this.projectId, {
       type: value.type, title: value.title.trim(), description: value.description.trim() || null,
-      priority: value.priority, assigneeUserId: value.assigneeUserId || null, dueAtUtc: this.toUtc(value.dueAtUtc),
+      priority: value.priority, assigneeUserId: this.canManage ? value.assigneeUserId || null : null, dueAtUtc: this.toUtc(value.dueAtUtc),
     }).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: item => { if (item.projectId !== this.projectId) return; this.createForm.reset({ type: 'Task', title: '', description: '', priority: 'Medium', assigneeUserId: '', dueAtUtc: '' }); this.notice.set('Work item created.'); this.open(item); this.load(); },
       error: e => this.error.set(this.describeError(e)),

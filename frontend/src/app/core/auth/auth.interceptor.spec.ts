@@ -70,4 +70,40 @@ describe('authInterceptor', () => {
     expect(status).toBe(403);
     expect(auth.accessToken).toBe('new-access-token');
   });
+
+  it('does not refresh an old request using a newer signed-in identity', () => {
+    let status: number | undefined;
+    client.get(`${API_BASE_URL}/projects`).subscribe({ error: error => status = error.status });
+    const oldRequest = http.expectOne(`${API_BASE_URL}/projects`);
+    auth.login({ email: 'new-user@example.test', password: 'correct horse battery' }).subscribe();
+    http.expectOne(`${API_BASE_URL}/auth/login`).flush({ ...session, userId: 'new-user', accessToken: 'new-identity-token' });
+    oldRequest.flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectNone(`${API_BASE_URL}/auth/refresh`);
+    expect(status).toBe(401); expect(auth.accessToken).toBe('new-identity-token');
+  });
+
+  it.each([429, 503])('preserves the session after transient refresh failure %s', (status) => {
+    client.get(`${API_BASE_URL}/projects`).subscribe({ error: () => {} });
+    http.expectOne(`${API_BASE_URL}/projects`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${API_BASE_URL}/auth/refresh`).flush({}, { status, statusText: 'Retry later' });
+    expect(auth.accessToken).toBe(session.accessToken);
+  });
+
+  it('clears the session after a rejected refresh credential', () => {
+    client.get(`${API_BASE_URL}/projects`).subscribe({ error: () => {} });
+    http.expectOne(`${API_BASE_URL}/projects`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${API_BASE_URL}/auth/refresh`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    expect(auth.isAuthenticated).toBe(false);
+  });
+
+  it('shares one rotation across parallel unauthorized resource requests', () => {
+    client.get(`${API_BASE_URL}/projects`).subscribe();
+    client.get(`${API_BASE_URL}/notifications`).subscribe();
+    http.expectOne(`${API_BASE_URL}/projects`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${API_BASE_URL}/notifications`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    const refresh = http.match(`${API_BASE_URL}/auth/refresh`);
+    expect(refresh.length).toBe(1); refresh[0].flush({ ...session, accessToken: 'rotated' });
+    http.expectOne(`${API_BASE_URL}/projects`).flush({});
+    http.expectOne(`${API_BASE_URL}/notifications`).flush({});
+  });
 });
