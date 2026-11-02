@@ -17,7 +17,7 @@ export class NotificationBellComponent {
   open(notification: Notification): void {
     if (!notification.readAtUtc) this.inbox.markRead(notification.id);
     this.opened.set(false);
-    void this.router.navigate(['/organizations', notification.organizationId, 'projects', notification.projectId, 'work-items'],
-      { queryParams: { workItemId: notification.workItemId } });
+    void this.router.navigate(['/organizations', notification.organizationId, 'projects', notification.projectId, notification.incidentId ? 'incidents' : 'work-items'],
+      { queryParams: notification.incidentId ? { incidentId: notification.incidentId } : { workItemId: notification.workItemId } });
   }
 }

@@ -2,7 +2,8 @@ export interface Notification {
   id: string;
   organizationId: string;
   projectId: string;
-  workItemId: string;
+  workItemId: string | null;
+  incidentId?: string | null;
   kind: string;
   message: string;
   createdAtUtc: string;

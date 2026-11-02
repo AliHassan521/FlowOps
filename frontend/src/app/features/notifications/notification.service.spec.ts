@@ -45,7 +45,9 @@ describe('NotificationService', () => {
 
   it('loads persisted notifications and recovers state on a hint or reconnect', () => {
     flushReload(); expect(service.unreadCount()).toBe(1);
+    let hints = 0; const subscription = service.changes$.subscribe(() => hints++);
     callbacks['NotificationsChanged'](); flushReload(2);
+    expect(hints).toBe(1); subscription.unsubscribe();
     expect(service.totalCount()).toBe(2);
     callbacks['reconnecting'](); expect(service.status()).toBe('reconnecting');
     callbacks['reconnected'](); flushReload(3);

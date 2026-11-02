@@ -3,12 +3,13 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { Organization, PagedResponse } from '../organizations/organization.models';
 import { OrganizationService } from '../organizations/organization.service';
+import { IncidentSummaryComponent } from '../incidents/incident-summary.component';
 import { WorkspaceHeaderComponent } from '../../shared/workspace-header.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, WorkspaceHeaderComponent],
+  imports: [RouterLink, WorkspaceHeaderComponent, IncidentSummaryComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })

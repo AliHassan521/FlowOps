@@ -385,6 +385,34 @@ See `Phase6Verification.md` for the measured checks and the intentional continuo
 
 ---
 
+## Phase 7 incident boundary
+
+- Incidents are project-owned operational records, separate from tasks and bugs. Domain types own the
+  lifecycle, required owner, immutable resolution and SLA timing rules; Application owns interfaces and
+  Contracts owns DTOs. Infrastructure implements orchestration/persistence through EF, as in existing
+  modules. API controllers contain request/response plumbing. An automated dependency check prevents
+  Domain, Application and Contracts from referencing API, Infrastructure, EF or ASP.NET.
+- Incident writes use an expected GUID version in addition to EF optimistic concurrency. Stale browser
+  edits and overlapping requests return 409, with business, audit and notification writes rolling back
+  together. Resolution completes the incident SLA in that same save.
+- `IncidentSla` reuses the domain `SlaSchedule` calculation. The existing worker selects one bounded,
+  deadline-ordered batch across work-item and incident measurements. Each record retains its independent
+  scope, concurrency protection, idempotent effects and retry cooldown.
+- Notifications reference exactly one work item or incident, enforced by a database check constraint.
+  Existing work-item rows and links retain their meaning. New incident notifications add `incidentId`
+  and use a null `workItemId`; the frontend routes by the resource reference. Deploy matching API and
+  frontend versions when introducing this contract extension.
+- Project/organization incident summaries use SQL-side aggregation over currently active projects.
+  The overview loads at most four workspace summaries on demand; the full engineering dashboard
+  and release tracking remain Phase 8 work.
+- Incident views are lazy loaded, use cancellable context/detail requests, and preserve drafts when a
+  SignalR hint arrives. The user can explicitly refresh authorized state. No resource payload is
+  broadcast over the notification hub.
+
+See `Phase7Verification.md` for the functional/regression evidence and remaining limits.
+
+---
+
 ## 9. Real-Time Architecture
 
 SignalR is used only for events where immediate client updates provide value.

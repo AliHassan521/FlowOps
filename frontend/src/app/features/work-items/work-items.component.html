@@ -1,7 +1,7 @@
 <app-workspace-header section="workspaces" />
 <main class="work-page">
   <nav class="breadcrumbs" aria-label="Breadcrumb"><a routerLink="/organizations">Workspaces</a><span>/</span><span>{{ organization()?.name || 'Organization' }}</span><span>/</span><strong>{{ project()?.key || 'Project' }}</strong></nav>
-  <header class="page-heading"><div><p class="eyebrow">{{ project()?.key || 'PROJECT' }} · DELIVERY</p><h1>{{ project()?.name || 'Work items' }}</h1><p>Plan work, track progress, and keep decisions with the item.</p></div><span class="total-pill">{{ totalCount() }} items</span></header>
+  <header class="page-heading"><div><p class="eyebrow">{{ project()?.key || 'PROJECT' }} · DELIVERY</p><h1>{{ project()?.name || 'Work items' }}</h1><p>Plan work, track progress, and keep decisions with the item.</p></div><div><a [routerLink]="['/organizations',organization()?.id,'projects',project()?.id,'incidents']">Incidents →</a> <span class="total-pill">{{ totalCount() }} items</span></div></header>
   @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
   @if (notice()) { <p class="notice success" role="status">{{ notice() }}</p> }
 
@@ -58,7 +58,7 @@
         <header class="detail-header"><div><p class="eyebrow">{{ item.type }} · {{ item.priority }}</p><h2>{{ item.title }}</h2></div><button class="close-button" type="button" aria-label="Close details" (click)="closeDetail()">×</button></header>
         <div class="detail-meta"><span class="status-pill" [attr.data-status]="item.status">{{ statusLabel(item.status) }}</span><span>Reported by {{ item.reporterName }}</span><span>Created {{ item.createdAtUtc | date:'mediumDate' }}</span></div>
         @defer (on immediate) { <app-work-item-sla [organizationId]="organization()?.id || ''" [projectId]="item.projectId" [workItemId]="item.id" [role]="role" [itemStatus]="item.status" /> }
-        @if (canManage) { <label class="assign-row">Assignee<select [value]="item.assigneeUserId || ''" (change)="assign($event)"><option value="">Unassigned</option>@for (member of members(); track member.userId) { <option [value]="member.userId">{{ member.fullName }} · {{ member.role }}</option> }</select></label> }
+        @if (canManage) { <label class="assign-row">Assignee<select [value]="item.assigneeUserId || ''" (change)="assign($event)"><option value="" [selected]="!item.assigneeUserId">Unassigned</option>@for (member of members(); track member.userId) { <option [value]="member.userId" [selected]="member.userId === item.assigneeUserId">{{ member.fullName }} · {{ member.role }}</option> }</select></label> }
         <section class="transition-section" aria-label="Workflow actions"><strong>Move to</strong><div class="transition-actions">@for (status of statuses; track status) { @if (canTransition(status)) { <button class="secondary-button" type="button" (click)="transition(status)">{{ statusLabel(status) }}</button> } }@if (!canTransition('New') && !canTransition('Triaged') && !canTransition('Assigned') && !canTransition('InProgress') && !canTransition('CodeReview') && !canTransition('QA') && !canTransition('Resolved') && !canTransition('Closed')) { <span class="subtle">No next step available.</span> }</div></section>
         <form class="edit-section" [formGroup]="editForm" (ngSubmit)="saveDetails()">
           <label>Title<input formControlName="title" [readonly]="!canEdit" /></label>

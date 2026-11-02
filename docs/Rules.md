@@ -275,6 +275,9 @@ The purpose is to prove understanding.
 6. Keep unit tests fast.
 7. Use integration tests for behavior that depends on real infrastructure boundaries.
 8. CI must run relevant tests before deployment.
+9. Every new module, phase, or feature must pass functional happy-path and failure-path tests, relevant edge cases, authorization/security checks, and regression tests for affected existing flows before it is committed.
+10. Run the full backend and frontend suites and release builds at phase milestones. Validate migrations and infrastructure-dependent behavior against isolated local SQL Server when changed. Record checks, failures/fixes, and remaining limits; never describe untested behavior as verified.
+11. Preserve the layered architecture: domain rules stay independent of HTTP/EF/UI, controllers stay thin, and cross-feature changes must include integration regression coverage.
 
 ---
 

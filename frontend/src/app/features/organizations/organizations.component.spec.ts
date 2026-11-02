@@ -127,4 +127,11 @@ describe('OrganizationsComponent', () => {
     expect(component.pendingProjectDeactivation()).toBeNull();
     expect(component.projects()).toEqual([]);
   });
+  it('displays the persisted organization role instead of the first role option', () => {
+    vi.mocked(api.members).mockReturnValue(of({items:[engineer],page:1,pageSize:50,totalCount:1}));
+    const fixture=TestBed.createComponent(OrganizationsComponent);fixture.detectChanges();
+    const select=fixture.nativeElement.querySelector('select[aria-label="Role for Engineer"]') as HTMLSelectElement;
+    expect(select.value).toBe('Engineer');
+  });
+
 });

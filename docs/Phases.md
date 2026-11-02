@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 6 — SLA & Background Processing
-- **Current task:** Local Phase 6 implementation and verification completed; learning checkpoints remain open.
-- **Verified so far:** Organization SLA policies, fixed work-item measurements, warning/breach processing, scoped hosted-worker execution, notifications, system audit actors, completion rules, and Angular policy/status/metric views are implemented. The adversarial review expanded verification to 119 backend tests and 58 Angular tests. Release and frontend production builds pass; initial frontend size is 453.69 kB. Both local SQL Server databases and the dedicated security validation database have all eleven migrations. A real-clock SQL Server/SignalR worker smoke flow passed. The review also fixes assignment authorization, refresh/logout races, client identity ordering, inactive bearer access, SLA retry starvation and HTTP error mapping; see AdversarialVerification.md for evidence and remaining risks.
-- **Learning status:** Phase 2 authentication, Phase 3 multi-tenant, Phase 4 workflow, Phase 5 real-time, and Phase 6 SLA/background-processing understanding checks remain open; implementation proceeds on the user's direction. These are not automatically signed off by tests.
-- **Local run:** No deployment has been performed. Use the documented local API, Angular, and isolated SQL Server workflow.
-- **Next phase:** Phase 7 — Incident Management, on the user's direction after the Phase 6 milestone.
+- **Current phase:** Phase 7 — Incident Management
+- **Current task:** Incident implementation and functional/regression verification complete; learning checkpoints remain open.
+- **Verified so far:** Project incident lifecycle, severity/service, ownership, versioned edits, response notes/timeline, resolution/root cause, shared SLA monitoring, resource-specific notifications and incident summaries are implemented. 151 Release backend tests and 74 Angular tests pass. Backend Release and Angular production builds pass; initial frontend size is 458.01 kB. All twelve migrations are validated on local SQL Server. A real two-minute SQL Server/SignalR incident flow and the browser response lifecycle pass. See Phase7Verification.md for checks, discovered dropdown fixes and remaining limits.
+- **Learning status:** Phase 2–7 understanding checks remain open; implementation proceeds on the user's direction. Tests do not sign these off.
+- **Local run:** No production deployment. Temporary servers are stopped after verification. Use the documented isolated local SQL Server workflow.
+- **Next phase:** Phase 8 — Release Tracking & Engineering Dashboard, on the user's direction.
 
 ---
 
@@ -393,16 +393,16 @@ Build a serious operational workflow.
 
 ## Tasks
 
-- [ ] Incident entity
-- [ ] Severity
-- [ ] Incident lifecycle
-- [ ] Assignment
-- [ ] Timeline
-- [ ] Comments
-- [ ] Root cause/resolution
-- [ ] SLA integration
-- [ ] Dashboard integration
-- [ ] Audit events
+- [x] Incident entity
+- [x] Severity
+- [x] Incident lifecycle
+- [x] Assignment
+- [x] Timeline
+- [x] Comments
+- [x] Root cause/resolution
+- [x] SLA integration
+- [x] Dashboard integration
+- [x] Audit events
 
 ## Acceptance Criteria
 

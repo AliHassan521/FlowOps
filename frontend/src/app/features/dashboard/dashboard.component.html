@@ -52,6 +52,7 @@
             <span class="workspace-role">{{ organization.currentUserRole }}</span>
             <span class="workspace-open" aria-hidden="true">→</span>
           </a>
+          @defer (on viewport) { <app-incident-summary [organizationId]="organization.id" /> } @placeholder { <p class="summary-note">Incident overview</p> }
         }
       </div>
     } @else {

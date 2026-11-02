@@ -13,7 +13,15 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
 {
     private readonly HashSet<Guid> pendingUsers = [];
 
-    public async Task QueueWorkItemAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
+    public Task QueueWorkItemAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
+        Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
+        => QueueAsync(actorUserId, organizationId, projectId, workItemId, null, eventId, kind, title, recipientIds, cancellationToken);
+
+    public Task QueueIncidentAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid incidentId,
+        Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
+        => QueueAsync(actorUserId, organizationId, projectId, null, incidentId, eventId, kind, title, recipientIds, cancellationToken);
+
+    private async Task QueueAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid? workItemId, Guid? incidentId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
     {
         var candidates = recipientIds.Where(id => id != actorUserId).Distinct().ToArray();
@@ -26,6 +34,11 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             "WorkItem.Assigned" => "You were assigned",
             "WorkItem.StatusChanged" => "Status changed",
             "WorkItem.CommentAdded" => "New comment",
+            "Incident.Assigned" => "You own the incident",
+            "Incident.StatusChanged" => "Incident status changed",
+            "Incident.CommentAdded" => "New incident comment",
+            "Incident.SlaWarning" => "Incident SLA deadline approaching",
+            "Incident.SlaBreached" => "Incident SLA deadline breached",
             "Sla.Warning" => "SLA deadline approaching",
             "Sla.Breached" => "SLA deadline breached",
             _ => throw new ArgumentException("Unsupported notification event.")
@@ -36,7 +49,7 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             db.Notifications.Add(new Notification
             {
                 UserId = recipient, OrganizationId = organizationId, ProjectId = projectId,
-                WorkItemId = workItemId, EventId = eventId, Kind = kind, Message = $"{action}: {title}",
+                WorkItemId = workItemId, IncidentId = incidentId, EventId = eventId, Kind = kind, Message = $"{action}: {title}",
                 CreatedAtUtc = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime
             });
             pendingUsers.Add(recipient);
@@ -61,7 +74,7 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
         var items = await query.OrderByDescending(n => n.CreatedAtUtc).ThenByDescending(n => n.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(n => new NotificationResponse(n.Id, n.OrganizationId, n.ProjectId, n.WorkItemId,
-                n.Kind, n.Message, n.CreatedAtUtc, n.ReadAtUtc)).ToListAsync(cancellationToken);
+                n.Kind, n.Message, n.CreatedAtUtc, n.ReadAtUtc, n.IncidentId)).ToListAsync(cancellationToken);
         return new PagedResponse<NotificationResponse>(items, page, pageSize, count);
     }
 

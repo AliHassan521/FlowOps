@@ -147,4 +147,10 @@ describe('WorkItemsComponent', () => {
     await blocks[0].render(DeferBlockState.Complete); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No SLA is attached to this work item.');
   });
+  it('displays the saved assignee when the lead assignment options are first rendered', () => {
+    organizations['get'].mockReturnValue(of({id:'org-1',currentUserRole:'Admin'}));
+    const fixture=TestBed.createComponent(WorkItemsComponent);fixture.detectChanges();fixture.componentInstance.open(item);fixture.detectChanges();
+    expect((fixture.nativeElement.querySelector('.assign-row select') as HTMLSelectElement).value).toBe('engineer-id');
+  });
+
 });

@@ -441,6 +441,34 @@ Resolved incidents should capture:
 
 ---
 
+### Implemented incident rules
+
+- Every incident belongs to one active project/organization. Its immutable, non-sequential incident
+  number is `INC-` followed by its full GUID; no shared counter or guessable sequence is required.
+- Severity is Low, Medium, High or Critical. The only lifecycle edges are Open → Investigating →
+  Mitigated → Resolved → Closed. An owner is required before investigation and cannot be removed
+  during an active investigation. This phase does not expose reopening or deletion.
+- All active members may read. Non-viewers may report incidents and append response notes. Only
+  Admin/TeamLead can assign or reassign an active writable organization member, attach an active
+  organization SLA policy, or close a resolved incident. Leads and the current owner may advance
+  the active response. Leads, reporters and owners may edit active incident details.
+- Resolution requires a 2–4000 character summary; root cause is optional, up to 4000 characters.
+  The server records the resolver and end time. Resolved/closed details, ownership, resolution and
+  original end time are retained; later response notes append to the history.
+- Create, detail, assignment, transition, comment and SLA events append timeline/audit records.
+  Assignment notifies the new owner; status/comments notify the reporter and owner, excluding the
+  actor. System SLA warnings/breaches notify both active responsible members without actor exclusion.
+- Incident SLA attachment starts one fixed UTC cycle, independently of the incident start time.
+  Policy values are captured. Archival does not change an existing measurement. Resolution strictly
+  before its deadline is met; resolution at/after the deadline records any unprocessed breach atomically.
+- Project register and overview cards show active, critical-active, resolved/closed, at-risk and breached
+  incident counts from server aggregates. Lists, response notes and timelines are paginated.
+- Version conflicts ask users to refresh rather than silently replacing another responder's work.
+  Real-time hints show an update banner without replacing a draft. Role/owner dropdowns explicitly
+  retain the saved selection when their options are rendered dynamically.
+
+---
+
 ## 11. Release Design
 
 A release is associated with an application/project and environment.

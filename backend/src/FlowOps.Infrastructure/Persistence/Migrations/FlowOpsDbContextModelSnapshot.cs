@@ -67,6 +67,188 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditEvents", (string)null);
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.Incident", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AffectedService")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RootCause")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ReporterUserId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.HasIndex("ProjectId", "Severity");
+
+                    b.HasIndex("ProjectId", "Status", "StartedAtUtc", "Id");
+
+                    b.ToTable("Incidents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Incidents_Owner", "[Status] NOT IN ('Investigating','Mitigated') OR [OwnerUserId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_Incidents_Resolution", "([Status] NOT IN ('Resolved','Closed') AND [EndedAtUtc] IS NULL) OR ([Status] IN ('Resolved','Closed') AND [EndedAtUtc] IS NOT NULL AND [EndedAtUtc] >= [StartedAtUtc] AND [Resolution] IS NOT NULL AND [ResolvedByUserId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Incidents_Severity", "[Severity] IN ('Low','Medium','High','Critical')");
+
+                            t.HasCheckConstraint("CK_Incidents_Status", "[Status] IN ('Open','Investigating','Mitigated','Resolved','Closed')");
+                        });
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.IncidentComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IncidentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("IncidentId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("IncidentComments");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.IncidentSla", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("BreachedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DeadlineAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("IncidentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PolicyName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("WarnedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("WarningAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WarningBeforeMinutes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId")
+                        .IsUnique();
+
+                    b.HasIndex("PolicyId");
+
+                    b.HasIndex("CompletedAtUtc", "BreachedAtUtc", "DeadlineAtUtc");
+
+                    b.HasIndex("CompletedAtUtc", "WarnedAtUtc", "WarningAtUtc");
+
+                    b.ToTable("IncidentSlas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_IncidentSlas_Deadline", "[DeadlineAtUtc] > [StartedAtUtc]");
+
+                            t.HasCheckConstraint("CK_IncidentSlas_Duration", "[DurationMinutes] >= 1 AND [DurationMinutes] <= 43200");
+
+                            t.HasCheckConstraint("CK_IncidentSlas_Warning", "[WarningBeforeMinutes] >= 0 AND [WarningBeforeMinutes] < [DurationMinutes]");
+                        });
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -77,6 +259,9 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IncidentId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Kind")
@@ -101,10 +286,12 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("WorkItemId")
+                    b.Property<Guid?>("WorkItemId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IncidentId");
 
                     b.HasIndex("OrganizationId");
 
@@ -119,7 +306,10 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "CreatedAtUtc", "Id");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Notifications_Resource", "([WorkItemId] IS NOT NULL AND [IncidentId] IS NULL) OR ([WorkItemId] IS NULL AND [IncidentId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("FlowOps.Domain.Entities.Organization", b =>
@@ -643,8 +833,84 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.Incident", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlowOps.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.User", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.IncidentComment", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.Incident", "Incident")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Incident");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.IncidentSla", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.Incident", "Incident")
+                        .WithOne()
+                        .HasForeignKey("FlowOps.Domain.Entities.IncidentSla", "IncidentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.SlaPolicy", "Policy")
+                        .WithMany()
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+
+                    b.Navigation("Policy");
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.Notification", b =>
                 {
+                    b.HasOne("FlowOps.Domain.Entities.Incident", "Incident")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FlowOps.Domain.Entities.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
@@ -666,8 +932,9 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.HasOne("FlowOps.Domain.Entities.WorkItem", "WorkItem")
                         .WithMany()
                         .HasForeignKey("WorkItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Incident");
 
                     b.Navigation("Organization");
 

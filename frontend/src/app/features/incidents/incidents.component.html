@@ -1,0 +1,478 @@
+<app-workspace-header section="workspaces" />
+<main class="incident-page">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a routerLink="/organizations">Workspaces</a><span>/</span
+    ><span>{{ organization()?.name }}</span
+    ><span>/</span
+    ><a
+      [routerLink]="['/organizations', organization()?.id, 'projects', project()?.id, 'work-items']"
+      >{{ project()?.key || 'Project' }}</a
+    >
+  </nav>
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">{{ project()?.key }} · OPERATIONS</p>
+      <h1>Incidents</h1>
+      <p>Coordinate the response. Keep a clear record of what happened.</p>
+    </div>
+    @if (canWrite) {
+      <button class="primary" type="button" (click)="showCreate.set(!showCreate())">
+        {{ showCreate() ? 'Cancel report' : 'Report incident' }}
+      </button>
+    }
+  </header>
+  @if (project() && organization()) {
+    <app-incident-summary
+      [organizationId]="organization()!.id"
+      [projectId]="project()!.id"
+      [refreshKey]="refreshKey()"
+    />
+  }
+  @if (updatesAvailable()) {
+    <p class="notice" role="status">
+      New operational updates are available.
+      <button class="secondary" type="button" (click)="refresh()" [disabled]="saving()">
+        Refresh incident & metrics
+      </button>
+    </p>
+  }
+  @if (error()) {
+    <p class="error notice" role="alert">{{ error() }}</p>
+  }
+  @if (showCreate() && canWrite) {
+    <section class="panel" aria-labelledby="report-title">
+      <h2 id="report-title">Report an incident</h2>
+      <form class="form-grid" [formGroup]="createForm" (ngSubmit)="create()">
+        <label class="wide"
+          >Title *<input formControlName="title" maxlength="200" placeholder="What is the impact?"
+        /></label>
+        <label
+          >Affected service *<input
+            formControlName="affectedService"
+            maxlength="120"
+            placeholder="Public API"
+        /></label>
+        <label
+          >Severity<select formControlName="severity">
+            @for (severity of severities; track severity) {
+              <option [value]="severity">{{ severity }}</option>
+            }
+          </select></label
+        >
+        <label class="wide"
+          >Description<textarea
+            formControlName="description"
+            maxlength="8000"
+            rows="3"
+            placeholder="Symptoms, impact, and initial observations"
+          ></textarea>
+        </label>
+        @if (canManage) {
+          <label class="wide"
+            >Owner<select formControlName="ownerUserId">
+              <option value="">Unassigned</option>
+              @for (member of members(); track member.userId) {
+                <option [value]="member.userId">{{ member.fullName }} · {{ member.role }}</option>
+              }
+            </select></label
+          >
+        }
+        @if (moreMembers()) {
+          <button
+            class="quiet"
+            type="button"
+            (click)="loadMoreMembers()"
+            [disabled]="loadingOptions()"
+          >
+            Load more owners
+          </button>
+        }
+        <div class="actions wide">
+          <small>Required fields are marked *. Title and service need at least 2 characters.</small
+          ><button class="primary" type="submit" [disabled]="saving() || createForm.invalid">
+            {{ saving() ? 'Reporting…' : 'Create incident' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+  <section class="panel list-panel" aria-labelledby="incidents-title">
+    <div class="section-heading">
+      <h2 id="incidents-title">
+        Incident register <span>{{ total() }}</span>
+      </h2>
+      <button type="button" class="secondary" (click)="load()" [disabled]="loading() || saving()">
+        Refresh list & metrics
+      </button>
+    </div>
+    <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+      <label
+        >Search<input
+          formControlName="search"
+          maxlength="100"
+          placeholder="Title or service" /></label
+      ><label
+        >Severity<select formControlName="severity">
+          <option value="">All severities</option>
+          @for (severity of severities; track severity) {
+            <option [value]="severity">{{ severity }}</option>
+          }
+        </select></label
+      ><label
+        >Status<select formControlName="status">
+          <option value="">All statuses</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ status }}</option>
+          }
+        </select></label
+      ><button type="submit" class="secondary">Apply filters</button>
+    </form>
+    @if (loading()) {
+      <p role="status" class="empty">Loading incidents…</p>
+    } @else {
+      <div class="incident-list">
+        @for (item of items(); track item.id) {
+          <button
+            type="button"
+            class="incident-row"
+            [class.selected]="selected()?.id === item.id"
+            (click)="open(item.id)"
+            [disabled]="saving()"
+          >
+            <span
+              class="severity"
+              [class.critical]="item.severity === 'Critical'"
+              [class.high]="item.severity === 'High'"
+              >{{ item.severity }}</span
+            ><span class="incident-copy"
+              ><strong>{{ item.title }}</strong
+              ><small
+                >{{ item.affectedService }} · {{ item.ownerName || 'Unassigned' }} ·
+                {{ item.startedAtUtc | date: 'mediumDate' }}</small
+              ></span
+            ><span class="status">{{ item.status }}</span
+            ><span aria-hidden="true">→</span>
+          </button>
+        } @empty {
+          <p class="empty">No incidents match these filters.</p>
+        }
+      </div>
+    }
+    <footer class="pagination">
+      <span>{{ total() }} incidents</span>
+      <div>
+        <button
+          type="button"
+          class="quiet"
+          (click)="movePage(-1)"
+          [disabled]="page() <= 1 || loading()"
+        >
+          Previous</button
+        ><span>{{ page() }} / {{ pages }}</span
+        ><button
+          type="button"
+          class="quiet"
+          (click)="movePage(1)"
+          [disabled]="page() >= pages || loading()"
+        >
+          Next
+        </button>
+      </div>
+    </footer>
+  </section>
+  @if (detailLoading()) {
+    <section class="panel" role="status">Loading incident details…</section>
+  }
+  @if (detailError()) {
+    <p class="error notice" role="alert">{{ detailError() }}</p>
+  }
+  @if (selected(); as item) {
+    <section class="panel detail" aria-labelledby="incident-title">
+      <header class="section-heading">
+        <div>
+          <p class="eyebrow incident-number">{{ item.number }}</p>
+          <h2 id="incident-title">{{ item.title }}</h2>
+          <p class="muted">
+            {{ item.status }} · Reported by {{ item.reporterName }} ·
+            {{ item.startedAtUtc | date: 'medium' }}
+          </p>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" (click)="open(item.id)" [disabled]="saving()">
+            Refresh incident</button
+          ><button type="button" class="quiet" (click)="close()" [disabled]="saving()">
+            Close details
+          </button>
+        </div>
+      </header>
+      <div class="detail-grid">
+        <div>
+          <form class="form-grid" [formGroup]="editForm" (ngSubmit)="update()">
+            <label class="wide"
+              >Title<input formControlName="title" maxlength="200" [readOnly]="!canEdit" /></label
+            ><label
+              >Affected service<input
+                formControlName="affectedService"
+                maxlength="120"
+                [readOnly]="!canEdit" /></label
+            ><label
+              >Severity<select
+                formControlName="severity"
+                [attr.aria-disabled]="!canEdit"
+                (pointerdown)="!canEdit && $event.preventDefault()"
+              >
+                @for (severity of severities; track severity) {
+                  <option [value]="severity" [disabled]="!canEdit">{{ severity }}</option>
+                }
+              </select></label
+            ><label class="wide"
+              >Description<textarea
+                formControlName="description"
+                maxlength="8000"
+                rows="3"
+                [readOnly]="!canEdit"
+              ></textarea>
+            </label>
+            @if (canEdit) {
+              <div class="actions wide">
+                <button type="submit" class="secondary" [disabled]="saving() || editForm.invalid">
+                  Save details
+                </button>
+              </div>
+            }
+          </form>
+          <div class="owner">
+            <strong>Owner</strong>
+            @if (canManage && !terminal) {
+              <select
+                [value]="item.ownerUserId || ''"
+                (change)="assign($event)"
+                [disabled]="saving()"
+                aria-label="Incident owner"
+              >
+                <option [selected]="!item.ownerUserId" value="" [disabled]="item.status !== 'Open'">Unassigned</option>
+                @for (member of members(); track member.userId) {
+                  <option [value]="member.userId" [selected]="member.userId === item.ownerUserId">{{ member.fullName }} · {{ member.role }}</option>
+                }
+              </select>
+              @if (moreMembers()) {
+                <button
+                  type="button"
+                  class="quiet"
+                  (click)="loadMoreMembers()"
+                  [disabled]="loadingOptions()"
+                >
+                  More owners
+                </button>
+              }
+            } @else {
+              <span>{{ item.ownerName || 'Unassigned' }}</span>
+            }
+          </div>
+          @if (nextStatus; as next) {
+            <section class="workflow">
+              <p class="eyebrow">NEXT STEP</p>
+              @if (next === 'Resolved') {
+                <form [formGroup]="resolutionForm" (ngSubmit)="transition()">
+                  <label
+                    >Resolution *<textarea
+                      formControlName="resolution"
+                      maxlength="4000"
+                      rows="3"
+                      placeholder="What restored the service?"
+                    ></textarea></label
+                  ><label
+                    >Root cause, if known<textarea
+                      formControlName="rootCause"
+                      maxlength="4000"
+                      rows="2"
+                    ></textarea></label
+                  ><button
+                    class="primary"
+                    type="submit"
+                    [disabled]="saving() || resolutionForm.invalid"
+                  >
+                    Resolve incident
+                  </button>
+                </form>
+              } @else {
+                <p>
+                  {{
+                    item.status === 'Open' && !item.ownerUserId
+                      ? 'Assign an owner before starting the investigation.'
+                      : 'Record the next stage of the response.'
+                  }}
+                </p>
+                <button
+                  type="button"
+                  class="primary"
+                  (click)="transition()"
+                  [disabled]="saving() || (next === 'Investigating' && !item.ownerUserId)"
+                >
+                  {{
+                    next === 'Investigating'
+                      ? 'Start investigation'
+                      : next === 'Mitigated'
+                        ? 'Mark mitigated'
+                        : 'Close incident'
+                  }}
+                </button>
+              }
+            </section>
+          }
+          @if (item.resolution) {
+            <section class="resolution">
+              <h3>Resolution</h3>
+              <p>{{ item.resolution }}</p>
+              @if (item.rootCause) {
+                <h3>Root cause</h3>
+                <p>{{ item.rootCause }}</p>
+              }
+              <small>Resolved {{ item.endedAtUtc | date: 'medium' }}</small>
+            </section>
+          }
+          <section class="comments">
+            <h3>
+              Response notes <span>{{ commentTotal() }}</span>
+            </h3>
+            @for (comment of comments(); track comment.id) {
+              <article>
+                <strong>{{ comment.authorName }}</strong
+                ><time>{{ comment.createdAtUtc | date: 'medium' }}</time>
+                <p>{{ comment.body }}</p>
+              </article>
+            } @empty {
+              <p class="muted">No response notes yet.</p>
+            }
+            <div class="pagination">
+              <button
+                class="quiet"
+                type="button"
+                (click)="moveComments(-1)"
+                [disabled]="commentPage() <= 1"
+              >
+                Previous notes</button
+              ><span>Page {{ commentPage() }}</span
+              ><button
+                class="quiet"
+                type="button"
+                (click)="moveComments(1)"
+                [disabled]="commentPage() * 50 >= commentTotal()"
+              >
+                Next notes
+              </button>
+            </div>
+            @if (canWrite) {
+              <form [formGroup]="commentForm" (ngSubmit)="addComment()">
+                <label
+                  >Add a response note<textarea
+                    formControlName="body"
+                    maxlength="4000"
+                    rows="2"
+                    placeholder="Investigation findings or response updates"
+                  ></textarea></label
+                ><button
+                  class="secondary"
+                  type="submit"
+                  [disabled]="saving() || commentForm.invalid"
+                >
+                  Add note
+                </button>
+              </form>
+            }
+          </section>
+        </div>
+        <aside>
+          <section class="sla-panel">
+            <h3>Resolution SLA</h3>
+            @if (sla()?.sla; as measurement) {
+              <span
+                class="status"
+                [class.breached]="
+                  measurement.status === 'Breached' || measurement.status === 'Overdue'
+                "
+                >{{ measurement.status }}</span
+              >
+              <p>
+                <strong>{{ measurement.policyName }}</strong>
+              </p>
+              <p>Deadline {{ measurement.deadlineAtUtc | date: 'medium' }}</p>
+              <small
+                >Measured {{ sla()?.serverTimeUtc | date: 'mediumTime' }}. Refresh incident for the
+                latest state.</small
+              >
+              @if (measurement.completedAtUtc) {
+                <p>Completed {{ measurement.completedAtUtc | date: 'medium' }}</p>
+              }
+            } @else {
+              <p>No SLA measurement attached.</p>
+              @if (canManage && !terminal) {
+                <form [formGroup]="slaForm" (ngSubmit)="attachSla()">
+                  <label
+                    >Policy<select formControlName="policyId">
+                      <option value="">Select policy</option>
+                      @for (policy of policies(); track policy.id) {
+                        <option [value]="policy.id">
+                          {{ policy.name }} · {{ policy.durationMinutes }} min
+                        </option>
+                      }
+                    </select></label
+                  ><button type="submit" class="secondary" [disabled]="saving() || slaForm.invalid">
+                    Start fixed SLA
+                  </button>
+                </form>
+                @if (morePolicies()) {
+                  <button
+                    type="button"
+                    class="quiet"
+                    (click)="loadMorePolicies()"
+                    [disabled]="loadingOptions()"
+                  >
+                    Load more policies
+                  </button>
+                }
+                <a [routerLink]="['/organizations', organization()?.id, 'slas']"
+                  >Manage policies →</a
+                >
+              }
+            }
+            <p class="sla-help">
+              The clock starts when attached and stops at resolution. Its deadline cannot be reset.
+            </p>
+          </section>
+          <section class="timeline">
+            <h3>
+              Timeline <span>{{ timelineTotal() }}</span>
+            </h3>
+            <ol>
+              @for (event of timeline(); track event.id) {
+                <li>
+                  <strong>{{ eventLabel(event.action) }}</strong
+                  ><span>{{ event.actorName }}</span
+                  ><time>{{ event.occurredAtUtc | date: 'medium' }}</time>
+                </li>
+              }
+            </ol>
+            <div class="pagination">
+              <button
+                type="button"
+                class="quiet"
+                (click)="moveTimeline(-1)"
+                [disabled]="timelinePage() <= 1"
+              >
+                Previous events</button
+              ><button
+                type="button"
+                class="quiet"
+                (click)="moveTimeline(1)"
+                [disabled]="timelinePage() * 50 >= timelineTotal()"
+              >
+                Next events
+              </button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  }
+</main>

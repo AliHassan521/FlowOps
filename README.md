@@ -4,7 +4,7 @@ FlowOps is a modular engineering-operations platform for work tracking, incident
 
 ## Current milestone
 
-Phases 2 through 6 have working local implementations; learning sign-off is pending:
+Phases 2 through 7 have working local implementations; learning sign-off is pending:
 
 - BCrypt password hashing
 - JWT access tokens held by the Angular client in memory
@@ -35,21 +35,23 @@ Phases 2 through 6 have working local implementations; learning sign-off is pend
 - A configurable scoped background worker with durable, concurrency-protected warning/breach processing
 - SLA notifications, system audit history, and completion that preserves late breaches
 - Angular SLA policy management and work-item deadline/status views, loaded on demand
+- Incident lifecycle, ownership, response notes/timeline, resolution/root cause and fixed SLA monitoring
+- Incident summary cards, resource-specific inbox links and versioned incident edits
 
 The automated API tests use SQLite in memory, including a real SignalR test-server connection.
-All ten SQL Server migrations were applied to the configured `FlowOpsDb` database and
-the isolated `FlowOpsPhase3Validation` database. Coverage currently has 119 backend tests and 58 Angular tests.
+All twelve SQL Server migrations were applied to the configured `FlowOpsDb` database and
+the isolated `FlowOpsPhase3Validation` database. Coverage currently has 151 backend tests and 74 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
 vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
 A live SQL Server and SignalR smoke flow verified notification delivery, offline recovery,
 read state, ownership, UTC timestamps, pagination, and membership revocation. The local
 Angular app and API can be run using the steps below.
 
-This is not yet a complete or production-ready product. Incidents, releases,
+This is not yet a complete or production-ready product. Releases,
 CI, containerized local development,
 operational hardening, and deployment practice remain future phases. No deployment
 has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
-workflow, Phase 5 real-time, and Phase 6 background-processing learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
+workflow, Phase 5 real-time, Phase 6 background-processing, and Phase 7 incident learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.
 
 ## Local setup
@@ -168,7 +170,21 @@ See [Phase 6 verification](docs/Phase6Verification.md) for lifecycle, concurrenc
 
 See [the verification report](docs/AdversarialVerification.md) for reproduced problems, fixes,
 SQL Server race and migration tests, HTTP security checks, commands and remaining production gates.
-Refresh/logout now serialize per login family; apply all eleven migrations before running this version.
+Refresh/logout now serialize per login family; apply all twelve migrations before running this version.
 Logout clears the local session immediately and revokes the refresh family. Active bearer tokens
 expire on their normal short lifetime; disabling an account rejects new authenticated requests.
 SLA failures receive a bounded retry cooldown so later records can proceed.
+
+## Incident management
+
+From a project, open **Incidents** to report an outage, assign an owner, record the response and
+resolve/close it. Severity and affected service are explicit; resolution is required and root cause
+is recorded when known. The incident timeline and resolution remain preserved after closure.
+Admins/TeamLeads manage ownership, fixed SLA attachment and closure. Current owners can progress
+investigation, mitigation and resolution. Viewers remain read-only.
+
+Incident SLAs share the existing hosted worker and notification inbox; the overview and project
+register show scoped incident aggregates. Version conflicts request a refresh, and live hints never
+overwrite an in-progress draft. Apply all **12 migrations** and run the matching API and Angular version.
+See [Phase 7 verification](docs/Phase7Verification.md) for functional/regression coverage and commands.
+Future changes must pass the standing testing gate in [development rules](docs/Rules.md).

@@ -96,3 +96,5 @@ td small { margin-top: .2rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (max-width: 850px) { .workspace-grid { grid-template-columns: 1fr; } }
 @media (max-width: 580px) { .page-shell { padding-top: 1.5rem; } .panel { padding: 1rem; } .invite-form { align-items: stretch; flex-direction: column; } .field, .field.grow, .role-field { flex-basis: auto; } .page-header { align-items: flex-start; } }
+
+.work-items-link + .work-items-link { margin-left: 16px; }

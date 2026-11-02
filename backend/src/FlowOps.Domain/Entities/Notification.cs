@@ -9,8 +9,10 @@ public sealed class Notification
     public Organization Organization { get; set; } = null!;
     public Guid ProjectId { get; set; }
     public Project Project { get; set; } = null!;
-    public Guid WorkItemId { get; set; }
-    public WorkItem WorkItem { get; set; } = null!;
+    public Guid? WorkItemId { get; set; }
+    public WorkItem? WorkItem { get; set; }
+    public Guid? IncidentId { get; set; }
+    public Incident? Incident { get; set; }
     public Guid EventId { get; set; }
     public string Kind { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;

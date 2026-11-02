@@ -35,4 +35,11 @@ describe('NotificationBellComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/organizations', 'org1', 'projects', 'project1', 'work-items'],
       { queryParams: { workItemId: 'item1' } });
   });
+  it('navigates an incident notification to its incident without changing work-item links', () => {
+    const fixture=TestBed.createComponent(NotificationBellComponent);
+    const navigate=vi.spyOn(TestBed.inject(Router),'navigate').mockResolvedValue(true);
+    fixture.componentInstance.open({...notification,workItemId:null,incidentId:'incident-1',kind:'Incident.Assigned'});
+    expect(navigate).toHaveBeenCalledWith(['/organizations','org1','projects','project1','incidents'],{queryParams:{incidentId:'incident-1'}});
+  });
+
 });

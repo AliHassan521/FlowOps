@@ -14,5 +14,6 @@ export const routes: Routes = [
   { path: 'organizations', component: OrganizationsComponent, canActivate: [authGuard] },
   { path: 'organizations/:organizationId/slas', loadComponent: () => import('./features/sla/sla-policies.component').then(module => module.SlaPoliciesComponent), canActivate: [authGuard] },
   { path: 'organizations/:organizationId/projects/:projectId/work-items', component: WorkItemsComponent, canActivate: [authGuard] },
+  { path: 'organizations/:organizationId/projects/:projectId/incidents', loadComponent: () => import('./features/incidents/incidents.component').then(module => module.IncidentsComponent), canActivate: [authGuard] },
   { path: '**', redirectTo: 'dashboard' },
 ];

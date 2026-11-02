@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, effect, inject, Injectable, InjectionToken, OnDestroy, signal, untracked } from '@angular/core';
-import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
+import { firstValueFrom, forkJoin, Subject, Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { API_BASE_URL } from '../../core/config/api.config';
 import { Notification, NotificationPage } from './notification.models';
@@ -30,6 +30,8 @@ export class NotificationService implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly createConnection = inject(NOTIFICATION_CONNECTION_FACTORY);
+  private readonly changed = new Subject<void>();
+  readonly changes$ = this.changed.asObservable();
   readonly items = signal<Notification[]>([]);
   readonly unreadCount = signal(0);
   readonly totalCount = signal(0);
@@ -128,16 +130,16 @@ export class NotificationService implements OnDestroy {
     if (generation !== this.generation || !this.userId) { await connection.stop().catch(() => {}); return; }
     this.connection = connection;
     const current = () => generation === this.generation && this.connection === connection;
-    connection.on('NotificationsChanged', () => { if (current()) this.reload(); });
+    connection.on('NotificationsChanged', () => { if (current()) { this.reload(); this.changed.next(); } });
     connection.onreconnecting(() => { if (current()) this.status.set('reconnecting'); });
-    connection.onreconnected(() => { if (current()) { this.status.set('live'); this.reload(); } });
+    connection.onreconnected(() => { if (current()) { this.status.set('live'); this.reload(); this.changed.next(); } });
     connection.onclose(() => {
       if (current()) { this.status.set('offline'); this.scheduleRetry(generation); }
     });
     try {
       await connection.start();
       if (!current()) { await connection.stop(); return; }
-      this.status.set('live'); this.reload();
+      this.status.set('live'); this.reload(); this.changed.next();
     } catch {
       if (current()) { this.status.set('offline'); this.scheduleRetry(generation); }
     }

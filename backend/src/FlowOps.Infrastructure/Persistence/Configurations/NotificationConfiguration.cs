@@ -8,7 +8,8 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
 {
     public void Configure(EntityTypeBuilder<Notification> builder)
     {
-        builder.ToTable("Notifications");
+        builder.ToTable("Notifications", table => table.HasCheckConstraint("CK_Notifications_Resource",
+            "([WorkItemId] IS NOT NULL AND [IncidentId] IS NULL) OR ([WorkItemId] IS NULL AND [IncidentId] IS NOT NULL)"));
         builder.HasKey(n => n.Id);
         builder.Property(n => n.Kind).HasMaxLength(64).IsRequired();
         builder.Property(n => n.Message).HasMaxLength(300).IsRequired();
@@ -18,6 +19,7 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(n => n.Organization).WithMany().HasForeignKey(n => n.OrganizationId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(n => n.Project).WithMany().HasForeignKey(n => n.ProjectId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(n => n.Incident).WithMany().HasForeignKey(n => n.IncidentId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(n => n.WorkItem).WithMany().HasForeignKey(n => n.WorkItemId).OnDelete(DeleteBehavior.Restrict);
     }
 }
