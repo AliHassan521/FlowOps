@@ -1,5 +1,6 @@
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
+import { SlaService } from '../sla/sla.service';
 import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../notifications/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -20,7 +21,7 @@ describe('WorkItemsComponent', () => {
   let role: string;
   let userId: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     role = 'Engineer'; userId = 'engineer-id';
     workItems = {
       list: vi.fn().mockReturnValue(of({ items: [item], page: 1, pageSize: 20, totalCount: 1 })),
@@ -37,15 +38,18 @@ describe('WorkItemsComponent', () => {
       members: vi.fn().mockReturnValue(of({ items: [{ userId: 'engineer-id', fullName: 'Engineer', role: 'Engineer', isActive: true }] })),
     };
     TestBed.configureTestingModule({
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       imports: [WorkItemsComponent],
       providers: [
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ organizationId: 'org-1', projectId: 'project-1' })), queryParamMap: of(convertToParamMap({})) } },
         { provide: NotificationService, useValue: { unreadCount: () => 0, reload: vi.fn() } },
+        { provide: SlaService, useValue: { state: () => of({ sla: null, serverTimeUtc: '2026-11-02T10:00:00Z' }), policies: () => of({ items: [], totalCount: 0 }) } },
         { provide: OrganizationService, useValue: organizations },
         { provide: WorkItemService, useValue: workItems },
         { provide: AuthService, useValue: { currentUser: () => ({ userId, fullName: 'Engineer' }) } },
       ],
     });
+    await TestBed.compileComponents();
   });
 
   it('loads project metadata and a paged work item list', () => {
@@ -117,5 +121,13 @@ describe('WorkItemsComponent', () => {
     expect(workItems['comments']).toHaveBeenLastCalledWith('org-1', 'project-1', 'item-1', 2);
     component.historyTotal.set(80); component.moveHistory(1);
     expect(workItems['history']).toHaveBeenLastCalledWith('org-1', 'project-1', 'item-1', 2);
+  });
+
+  it('renders the deferred SLA details for the selected work item', async () => {
+    const fixture = TestBed.createComponent(WorkItemsComponent); fixture.detectChanges();
+    fixture.componentInstance.open(item); fixture.detectChanges();
+    const blocks = await fixture.getDeferBlocks();
+    await blocks[0].render(DeferBlockState.Complete); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No SLA is attached to this work item.');
   });
 });

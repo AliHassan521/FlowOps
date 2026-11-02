@@ -5,7 +5,7 @@ namespace FlowOps.Application.Common.Interfaces;
 
 public interface INotificationService
 {
-    Task QueueWorkItemAsync(Guid actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
+    Task QueueWorkItemAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken);
     Task PublishPendingAsync();
     Task<PagedResponse<NotificationResponse>> ListAsync(Guid userId, int page, int pageSize, bool unreadOnly, CancellationToken cancellationToken);

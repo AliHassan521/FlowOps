@@ -4,7 +4,7 @@ FlowOps is a modular engineering-operations platform for work tracking, incident
 
 ## Current milestone
 
-Phases 2 through 5 have working local implementations; learning sign-off is pending:
+Phases 2 through 6 have working local implementations; learning sign-off is pending:
 
 - BCrypt password hashing
 - JWT access tokens held by the Angular client in memory
@@ -31,21 +31,25 @@ Phases 2 through 5 have working local implementations; learning sign-off is pend
 - Authenticated SignalR updates, reconnect recovery, and a periodic persisted-inbox fallback
 - Optimistic concurrency protection for work-item writes and UTC timestamp read conversion
 - API-scoped bearer credentials, safe refresh retries, stale-response protection, and later-page access in workspace/detail views
+- Organization SLA policies, fixed work-item deadlines, warning thresholds, and SLA metrics
+- A configurable scoped background worker with durable, concurrency-protected warning/breach processing
+- SLA notifications, system audit history, and completion that preserves late breaches
+- Angular SLA policy management and work-item deadline/status views, loaded on demand
 
 The automated API tests use SQLite in memory, including a real SignalR test-server connection.
-All nine SQL Server migrations were applied to the configured `FlowOpsDb` database and
-the isolated `FlowOpsPhase3Validation` database. Coverage currently has 41 backend tests and 37 Angular tests.
+All ten SQL Server migrations were applied to the configured `FlowOpsDb` database and
+the isolated `FlowOpsPhase3Validation` database. Coverage currently has 65 backend tests and 47 Angular tests.
 The Angular production build passes, and the production npm audit reports zero
 vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
 A live SQL Server and SignalR smoke flow verified notification delivery, offline recovery,
 read state, ownership, UTC timestamps, pagination, and membership revocation. The local
 Angular app and API can be run using the steps below.
 
-This is not yet a complete or production-ready product. Incidents, releases, SLAs,
+This is not yet a complete or production-ready product. Incidents, releases,
 CI, containerized local development,
 operational hardening, and deployment practice remain future phases. No deployment
 has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
-workflow and Phase 5 real-time learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
+workflow, Phase 5 real-time, and Phase 6 background-processing learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.
 
 ## Local setup
@@ -132,3 +136,30 @@ node backend/tests/phase5-smoke.cjs
 The smoke test creates synthetic accounts and a workspace in the selected local database, then
 soft-deactivates that workspace. Synthetic accounts and audit history remain. Do not target production.
 See [Phase 5 verification](docs/Phase5Verification.md) for the completed checks and remaining limits.
+
+## SLA policies and monitoring
+
+Open **SLA policies and metrics** from an organization workspace. Admins and TeamLeads can create
+and archive policies. Open a work item and select a policy in its SLA panel to start a fixed measurement.
+Clocks run continuously in UTC; the due-date field remains independent of the SLA deadline.
+A warning lead time of 0 disables warnings. Each item supports one measurement, which cannot be reset.
+Resolution completes it; late resolution retains the breach, and reopening does not restart its clock.
+Archiving a policy prevents new attachments and leaves existing measurements intact.
+
+The hosted worker starts with the API. Configuration in `SlaWorker` supports `Enabled` (default true),
+`IntervalSeconds` (default 30; range 1–3600), and `BatchSize` (default 100; range 1–500).
+Environment overrides use names such as `SlaWorker__IntervalSeconds`. Apply migrations before starting it.
+Measurements, audit events, and notifications are committed together, and live SignalR hints follow the commit.
+Work-item history now permits a null `actorUserId` for system-generated entries and displays the actor as **System**.
+
+To verify the real hosted worker, use the isolated API setup above with port **5156** and add:
+
+```powershell
+$env:SlaWorker__Enabled = 'true'
+$env:SlaWorker__IntervalSeconds = '1'
+$env:SlaWorker__BatchSize = '10'
+```
+
+Then run `node backend/tests/phase6-smoke.cjs` in a second terminal. It deliberately waits for a real
+two-minute SLA, creates only synthetic local data, and soft-deactivates its test workspace afterward.
+See [Phase 6 verification](docs/Phase6Verification.md) for lifecycle, concurrency, and operational limits.

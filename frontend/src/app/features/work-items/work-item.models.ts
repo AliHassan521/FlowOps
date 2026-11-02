@@ -30,7 +30,7 @@ export interface WorkItemComment {
 
 export interface WorkItemHistory {
   id: string;
-  actorUserId: string;
+  actorUserId: string | null;
   actorName: string;
   action: string;
   detailsJson: string | null;

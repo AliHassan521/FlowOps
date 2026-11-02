@@ -1,6 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, effect, inject, Injectable, InjectionToken, OnDestroy, signal, untracked } from '@angular/core';
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { API_BASE_URL } from '../../core/config/api.config';
@@ -16,13 +15,14 @@ export interface NotificationConnection {
 }
 
 export const NOTIFICATION_CONNECTION_FACTORY = new InjectionToken<
-  (token: () => Promise<string>) => NotificationConnection
+  (token: () => Promise<string>) => NotificationConnection | Promise<NotificationConnection>
 >('Notification connection factory', {
   providedIn: 'root',
-  factory: () => token => new HubConnectionBuilder()
-    .withUrl(`${API_BASE_URL}/hubs/notifications`, { accessTokenFactory: token })
-    .withAutomaticReconnect([0, 2000, 10000, 30000])
-    .configureLogging(LogLevel.None).build(),
+  factory: () => async token => {
+    const { HubConnectionBuilder, LogLevel } = await import('@microsoft/signalr');
+    return new HubConnectionBuilder().withUrl(`${API_BASE_URL}/hubs/notifications`, { accessTokenFactory: token })
+      .withAutomaticReconnect([0, 2000, 10000, 30000]).configureLogging(LogLevel.None).build();
+  },
 });
 
 @Injectable({ providedIn: 'root' })
@@ -113,14 +113,19 @@ export class NotificationService implements OnDestroy {
   private async connect(generation: number): Promise<void> {
     if (!this.userId || generation !== this.generation) return;
     this.status.set('connecting');
-    const connection = this.createConnection(async () => {
+    let connection: NotificationConnection;
+    try { connection = await this.createConnection(async () => {
       if (generation !== this.generation || !this.auth.currentUser()) throw new Error('Session ended.');
       const session = this.auth.currentUser()!;
       if (Date.parse(session.accessTokenExpiresAtUtc) <= Date.now() + 30000)
         await firstValueFrom(this.auth.refresh());
       if (generation !== this.generation) throw new Error('Session changed.');
       return this.auth.accessToken ?? '';
-    });
+    }); } catch {
+      if (generation === this.generation) { this.status.set('offline'); this.scheduleRetry(generation); }
+      return;
+    }
+    if (generation !== this.generation || !this.userId) { await connection.stop().catch(() => {}); return; }
     this.connection = connection;
     const current = () => generation === this.generation && this.connection === connection;
     connection.on('NotificationsChanged', () => { if (current()) this.reload(); });

@@ -11,10 +11,11 @@ import { OrganizationService } from '../organizations/organization.service';
 import { WorkspaceHeaderComponent } from '../../shared/workspace-header.component';
 import { WorkItem, WorkItemHistory, WorkItemStatus, WORK_ITEM_PRIORITIES, WORK_ITEM_STATUSES, WORK_ITEM_TRANSITIONS, WORK_ITEM_TYPES } from './work-item.models';
 import { WorkItemService } from './work-item.service';
+import { WorkItemSlaComponent } from '../sla/work-item-sla.component';
 
 @Component({
   selector: 'app-work-items', standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, WorkspaceHeaderComponent],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, WorkspaceHeaderComponent, WorkItemSlaComponent],
   templateUrl: './work-items.component.html', styleUrl: './work-items.component.css',
 })
 export class WorkItemsComponent implements OnInit {

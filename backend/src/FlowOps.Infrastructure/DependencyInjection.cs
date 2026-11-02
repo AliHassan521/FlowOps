@@ -5,6 +5,7 @@ using FlowOps.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace FlowOps.Infrastructure;
 
@@ -30,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IWorkItemService, WorkItemService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddScoped<ISlaService, SlaService>();
+        services.AddScoped<ISlaProcessor, SlaProcessor>();
 
         return services;
     }

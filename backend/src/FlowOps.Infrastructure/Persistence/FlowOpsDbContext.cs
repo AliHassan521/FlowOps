@@ -38,6 +38,8 @@ public class FlowOpsDbContext : DbContext
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<WorkItemComment> WorkItemComments => Set<WorkItemComment>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
+    public DbSet<WorkItemSla> WorkItemSlas => Set<WorkItemSla>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +56,8 @@ public class FlowOpsDbContext : DbContext
     private void UpdateWorkItemVersions()
     {
         foreach (var entry in ChangeTracker.Entries<WorkItem>().Where(entry => entry.State == EntityState.Modified))
+            entry.Entity.Version = Guid.NewGuid();
+        foreach (var entry in ChangeTracker.Entries<WorkItemSla>().Where(entry => entry.State == EntityState.Modified))
             entry.Entity.Version = Guid.NewGuid();
     }
 

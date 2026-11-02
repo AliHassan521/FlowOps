@@ -101,6 +101,7 @@
         </div>
 
         @if (members().length < memberTotal()) { <button class="secondary-button" type="button" (click)="loadMoreMembers()" [disabled]="loadingMore()">Load more members</button> }
+        <a class="work-items-link" [routerLink]="['/organizations', organization.id, 'slas']">SLA policies and metrics →</a>
         <div class="projects-heading"><div><p class="eyebrow">DELIVERY</p><h2>Projects</h2></div><span class="count">{{ projects().length }}</span></div>
         @if (canManageProjects) {
           <form class="invite-form project-form" [formGroup]="projectForm" (ngSubmit)="createProject()">

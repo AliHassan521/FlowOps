@@ -34,7 +34,7 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(80)");
 
-                    b.Property<Guid>("ActorUserId")
+                    b.Property<Guid?>("ActorUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DetailsJson")
@@ -335,6 +335,51 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.SlaPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("WarningBeforeMinutes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("SlaPolicies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SlaPolicies_Duration", "[DurationMinutes] >= 1 AND [DurationMinutes] <= 43200");
+
+                            t.HasCheckConstraint("CK_SlaPolicies_Warning", "[WarningBeforeMinutes] >= 0 AND [WarningBeforeMinutes] < [DurationMinutes]");
+                        });
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -489,13 +534,78 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.ToTable("WorkItemComments", (string)null);
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItemSla", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("BreachedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DeadlineAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PolicyName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("WarnedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("WarningAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WarningBeforeMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PolicyId");
+
+                    b.HasIndex("WorkItemId")
+                        .IsUnique();
+
+                    b.HasIndex("CompletedAtUtc", "BreachedAtUtc", "DeadlineAtUtc");
+
+                    b.HasIndex("CompletedAtUtc", "WarnedAtUtc", "WarningAtUtc");
+
+                    b.ToTable("WorkItemSlas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkItemSlas_Deadline", "[DeadlineAtUtc] > [StartedAtUtc]");
+
+                            t.HasCheckConstraint("CK_WorkItemSlas_Duration", "[DurationMinutes] >= 1 AND [DurationMinutes] <= 43200");
+
+                            t.HasCheckConstraint("CK_WorkItemSlas_Warning", "[WarningBeforeMinutes] >= 0 AND [WarningBeforeMinutes] < [DurationMinutes]");
+                        });
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.AuditEvent", b =>
                 {
                     b.HasOne("FlowOps.Domain.Entities.User", "Actor")
                         .WithMany()
                         .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FlowOps.Domain.Entities.Organization", "Organization")
                         .WithMany("AuditEvents")
@@ -592,6 +702,17 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FlowOps.Domain.Entities.SlaPolicy", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("FlowOps.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("FlowOps.Domain.Entities.Role", "Role")
@@ -652,6 +773,25 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Author");
+
+                    b.Navigation("WorkItem");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.WorkItemSla", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.SlaPolicy", "Policy")
+                        .WithMany()
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.WorkItem", "WorkItem")
+                        .WithOne()
+                        .HasForeignKey("FlowOps.Domain.Entities.WorkItemSla", "WorkItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Policy");
 
                     b.Navigation("WorkItem");
                 });

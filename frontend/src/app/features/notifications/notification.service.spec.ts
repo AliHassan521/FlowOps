@@ -15,7 +15,7 @@ describe('NotificationService', () => {
   let connection: NotificationConnection;
   let factory: ReturnType<typeof vi.fn>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers(); currentUser.set(user); callbacks = {};
     connection = {
       start: vi.fn().mockReturnValue(new Promise<void>(() => {})), stop: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +31,7 @@ describe('NotificationService', () => {
     ] });
     service = TestBed.inject(NotificationService); http = TestBed.inject(HttpTestingController);
     TestBed.tick();
+    await Promise.resolve();
   });
   afterEach(() => { service.ngOnDestroy(); http.verify(); vi.useRealTimers(); });
 
@@ -86,5 +87,15 @@ describe('NotificationService', () => {
     await vi.advanceTimersByTimeAsync(15000);
     expect(factory).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(15000); flushReload();
+  });
+
+  it('does not start a late-loaded connection after the user signs out', async () => {
+    flushReload();
+    let finishLoading!: (connection: NotificationConnection) => void;
+    const lateConnection = { ...connection, start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined) };
+    factory.mockReturnValueOnce(new Promise<NotificationConnection>(resolve => finishLoading = resolve));
+    callbacks['closed'](); await vi.advanceTimersByTimeAsync(15000);
+    currentUser.set(null); TestBed.tick(); finishLoading(lateConnection); await Promise.resolve();
+    expect(lateConnection.start).not.toHaveBeenCalled(); expect(lateConnection.stop).toHaveBeenCalled();
   });
 });

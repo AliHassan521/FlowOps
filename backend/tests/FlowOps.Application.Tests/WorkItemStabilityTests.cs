@@ -97,8 +97,11 @@ public sealed class WorkItemStabilityTests : IDisposable
         Assert.Equal(assignee.Id, (await db.Notifications.SingleAsync()).UserId);
     }
 
-    private WorkItemService Service(FlowOpsDbContext db) => new(db,
-        new NotificationService(db, dispatcher, NullLogger<NotificationService>.Instance));
+    private WorkItemService Service(FlowOpsDbContext db)
+    {
+        var notifications = new NotificationService(db, dispatcher, NullLogger<NotificationService>.Instance);
+        return new(db, notifications, new SlaService(db, notifications, TimeProvider.System));
+    }
 
     public void Dispose() => connection.Dispose();
 

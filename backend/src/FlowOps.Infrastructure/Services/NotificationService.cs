@@ -9,11 +9,11 @@ using Microsoft.Extensions.Logging;
 namespace FlowOps.Infrastructure.Services;
 
 public sealed class NotificationService(FlowOpsDbContext db, INotificationDispatcher dispatcher,
-    ILogger<NotificationService> logger) : INotificationService
+    ILogger<NotificationService> logger, TimeProvider? timeProvider = null) : INotificationService
 {
     private readonly HashSet<Guid> pendingUsers = [];
 
-    public async Task QueueWorkItemAsync(Guid actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
+    public async Task QueueWorkItemAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
     {
         var candidates = recipientIds.Where(id => id != actorUserId).Distinct().ToArray();
@@ -26,6 +26,8 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             "WorkItem.Assigned" => "You were assigned",
             "WorkItem.StatusChanged" => "Status changed",
             "WorkItem.CommentAdded" => "New comment",
+            "Sla.Warning" => "SLA deadline approaching",
+            "Sla.Breached" => "SLA deadline breached",
             _ => throw new ArgumentException("Unsupported notification event.")
         };
         foreach (var recipient in recipients)
@@ -34,7 +36,8 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             db.Notifications.Add(new Notification
             {
                 UserId = recipient, OrganizationId = organizationId, ProjectId = projectId,
-                WorkItemId = workItemId, EventId = eventId, Kind = kind, Message = $"{action}: {title}"
+                WorkItemId = workItemId, EventId = eventId, Kind = kind, Message = $"{action}: {title}",
+                CreatedAtUtc = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime
             });
             pendingUsers.Add(recipient);
         }

@@ -1,0 +1,18 @@
+<section class="sla-panel" aria-label="Service level agreement">
+  <header><div><p>SERVICE LEVEL</p><h3>SLA deadline</h3></div><button type="button" (click)="load()" [disabled]="loading() || saving()">Refresh</button></header>
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p role="status">Loading SLA…</p> }
+  @else if (state()?.sla; as sla) {
+    <div class="sla-status" [attr.data-status]="sla.status"><strong>{{ sla.status === 'AtRisk' ? 'At risk' : sla.status }}</strong><span>{{ timing() }}</span></div>
+    <dl><div><dt>Policy</dt><dd>{{ sla.policyName }}</dd></div><div><dt>Deadline</dt><dd>{{ sla.deadlineAtUtc | date:'medium' }}</dd></div>@if (sla.warningAtUtc) { <div><dt>Warning threshold</dt><dd>{{ sla.warningAtUtc | date:'medium' }}</dd></div> }@if (sla.breachedAtUtc) { <div><dt>Breached at</dt><dd>{{ sla.breachedAtUtc | date:'medium' }}</dd></div> }@if (sla.completedAtUtc) { <div><dt>Completed at</dt><dd>{{ sla.completedAtUtc | date:'medium' }}</dd></div> }</dl>
+    <small>This measurement keeps its original deadline and history, including after reopening.</small>
+  } @else if (state()) {
+    <p>No SLA is attached to this work item.</p>
+    @if (canStart()) {
+      <form [formGroup]="form" (ngSubmit)="start()"><label for="sla-policy">Policy<select id="sla-policy" formControlName="policyId"><option value="">Choose a policy</option>@for (policy of policies(); track policy.id) { <option [value]="policy.id">{{ policy.name }} · {{ policy.durationMinutes }} min</option> }</select></label><button type="submit" [disabled]="form.invalid || saving()">{{ saving() ? 'Starting…' : 'Start SLA' }}</button></form>
+      @if (morePolicies()) { <button type="button" (click)="loadMorePolicies()" [disabled]="loadingPolicies()">Load more policies</button> }
+      <small>The clock starts now and runs continuously. An existing SLA cannot be reset.</small>
+    }
+  }
+  <a [routerLink]="['/organizations', organizationId(), 'slas']">View organization SLA policies and metrics →</a>
+</section>

@@ -1,0 +1,16 @@
+:host { display: block; }
+.sla-panel { padding: 1rem; margin: 1rem 0; border: 1px solid #dce3ee; border-radius: .8rem; background: #fafbff; color: #344461; }
+header, .sla-status, form { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+header p { margin: 0 0 .25rem; color: #6d7596; font-size: .65rem; font-weight: 750; letter-spacing: .12em; }
+h3 { margin: 0; font-size: 1rem; }
+.sla-status { margin-top: 1rem; border-radius: .5rem; padding: .65rem; background: #eaf0fc; font-size: .8rem; }
+.sla-status[data-status='AtRisk'] { background: #fff3d6; color: #805e16; }
+.sla-status[data-status='Breached'], .sla-status[data-status='Overdue'] { background: #fbe7eb; color: #9c3650; }
+.sla-status[data-status='Met'] { background: #e5f4ed; color: #276d54; }
+dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .8rem; font-size: .76rem; }
+dt { margin-bottom: .25rem; color: #728098; } dd { margin: 0; }
+button { border: 1px solid #d8dfef; border-radius: .5rem; background: white; color: #5149c8; padding: .5rem .65rem; font: inherit; font-size: .75rem; cursor: pointer; }
+button:disabled { opacity: .45; cursor: default; }
+label { display: grid; gap: .3rem; font-size: .75rem; flex: 1; } select { min-width: 0; padding: .6rem; border: 1px solid #d8dfef; border-radius: .5rem; background: white; color: inherit; }
+p, small, a { font-size: .76rem; line-height: 1.6; } small { display: block; color: #74809a; margin-top: .7rem; } a { display: inline-block; margin-top: .8rem; color: #5149c8; } .error { color: #ad3452; }
+@media (max-width: 500px) { form, .sla-status { align-items: stretch; flex-direction: column; } }

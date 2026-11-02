@@ -718,6 +718,7 @@ public sealed partial class AuthApiTests : IDisposable
     {
         internal const string TestJwtSecret = "integration-test-secret-key-with-at-least-32-characters";
         private readonly SqliteConnection _connection;
+        internal ManualTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
         public AuthApiFactory(SqliteConnection connection)
         {
@@ -732,6 +733,7 @@ public sealed partial class AuthApiTests : IDisposable
             Environment.SetEnvironmentVariable("JwtSettings__RefreshTokenDays", "30");
             Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", "Server=(local);Database=FlowOpsTests;User Id=test;Password=test;TrustServerCertificate=True");
             Environment.SetEnvironmentVariable("Cors__AllowedOrigins__0", "https://localhost");
+            Environment.SetEnvironmentVariable("SlaWorker__Enabled", "false");
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -743,6 +745,8 @@ public sealed partial class AuthApiTests : IDisposable
                 services.RemoveAll<DbContextOptions<FlowOpsDbContext>>();
                 services.RemoveAll<FlowOpsDbContext>();
                 services.AddDbContext<FlowOpsDbContext>(options => options.UseSqlite(_connection));
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(Clock);
             });
         }
     }

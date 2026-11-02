@@ -364,6 +364,35 @@ The background worker should identify:
 
 A breach must be marked/recorded so repeated worker executions do not create duplicate notifications or audit entries.
 
+### Implemented measurement rules
+
+1. An Admin or TeamLead explicitly attaches one active organization policy to an open work item.
+   The clock starts at attachment, independently of the normal due date. No reset, removal, or extension
+   endpoint exists for a started measurement.
+2. Durations are integer minutes, 1–43200. Warning lead time is 0–(duration minus 1); zero disables
+   the warning. Calculation uses elapsed UTC time continuously, including nights and weekends.
+3. The policy duration/name/warning values are captured at attachment. Policy archival prevents new
+   attachments but neither pauses nor changes an existing measurement.
+4. At the warning threshold, the worker records a warning once. At or after the deadline it records a
+   breach once, using the deadline as `BreachedAtUtc` and the processing time as the audit occurrence.
+   A late worker sends a breach directly rather than an obsolete warning followed by a breach.
+5. Resolution/closure completes the measurement. Completion strictly before the deadline is met;
+   completion at or after it is breached. A late completion records a pending breach atomically with
+   the workflow change, so stopping the periodic worker does not erase late-completion history.
+6. Warning/breach processing and workflow completion coordinate through concurrency tokens on both
+   the SLA record and work item. Each save includes its audit and notifications. A conflict rolls all
+   of them back; a fresh service scope re-evaluates persisted state on the next tick.
+7. Reopening retains the original completed measurement. Archived organizations/projects are not
+   monitored. Current active reporters/assignees receive system notifications; inactive recipients
+   are skipped without discarding the breach record.
+8. Metrics count active unbreached measurements, the at-risk subset, historical/current breaches,
+   and completed measurements that met the deadline. An elapsed deadline can show Overdue before
+   the worker persists its Breached marker. Archived projects are excluded from these aggregates.
+
+Work-item history now permits `actorUserId: null` for system events. Downgrading the Phase 6 schema
+is blocked when system audit entries exist, rather than replacing their actors or deleting history.
+Use a reviewed forward migration for repairs after system events have been recorded.
+
 ---
 
 ## 10. Incident Design

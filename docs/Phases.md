@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 5 — Notifications & Real-Time Communication
-- **Current task:** Local Phase 5 implementation and verification completed; learning checkpoints remain open.
-- **Verified so far:** Durable work-item notifications, paginated unread/read APIs, authenticated recipient-only SignalR hints, reconnect/offline recovery, and the Angular notification inbox are implemented. All 41 backend tests and 37 Angular tests pass. Release and frontend production builds pass. Both local SQL Server databases have all nine migrations. A real SQL Server/SignalR smoke flow passed. Phase 4 audit fixes include work-item concurrency, UTC materialization, assignment consistency, credential scoping, refresh error handling, stale-response cancellation, and later-page access.
-- **Learning status:** Phase 2 authentication, Phase 3 multi-tenant, Phase 4 workflow, and Phase 5 real-time understanding checks remain open; implementation proceeds on the user's direction. These are not automatically signed off by tests.
+- **Current phase:** Phase 6 — SLA & Background Processing
+- **Current task:** Local Phase 6 implementation and verification completed; learning checkpoints remain open.
+- **Verified so far:** Organization SLA policies, fixed work-item measurements, warning/breach processing, scoped hosted-worker execution, notifications, system audit actors, completion rules, and Angular policy/status/metric views are implemented. All 65 backend tests and 47 Angular tests pass. Release and frontend production builds pass; initial frontend size is 452.39 kB. Both local SQL Server databases have all ten migrations. A real-clock SQL Server/SignalR worker smoke flow passed. Previous phase security and tenant protections remain covered.
+- **Learning status:** Phase 2 authentication, Phase 3 multi-tenant, Phase 4 workflow, Phase 5 real-time, and Phase 6 SLA/background-processing understanding checks remain open; implementation proceeds on the user's direction. These are not automatically signed off by tests.
 - **Local run:** No deployment has been performed. Use the documented local API, Angular, and isolated SQL Server workflow.
-- **Next phase:** Phase 6 — SLA & Background Processing, on the user's direction after the Phase 5 milestone.
+- **Next phase:** Phase 7 — Incident Management, on the user's direction after the Phase 6 milestone.
 
 ---
 
@@ -343,16 +343,16 @@ Introduce asynchronous/background business processing.
 
 ## Tasks
 
-- [ ] SLA policy model
-- [ ] Deadline calculation
-- [ ] Warning threshold
-- [ ] Background worker
-- [ ] Overdue detection
-- [ ] Breach recording
-- [ ] Notification creation
-- [ ] SignalR update
-- [ ] Idempotency protection
-- [ ] Configurable processing interval
+- [x] SLA policy model
+- [x] Deadline calculation
+- [x] Warning threshold
+- [x] Background worker
+- [x] Overdue detection
+- [x] Breach recording
+- [x] Notification creation
+- [x] SignalR update
+- [x] Idempotency protection
+- [x] Configurable processing interval
 
 ## Acceptance Criteria
 

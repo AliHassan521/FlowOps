@@ -61,7 +61,7 @@ public sealed class ExceptionHandlingMiddleware
                 message = statusCode is HttpStatusCode.InternalServerError
                             ? "An unexpected error occurred. Please try again later."
                             : ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException
-                                ? "The work item changed. Refresh and try again." : ex.Message,
+                                ? "The resource changed. Refresh and try again." : ex.Message,
                 traceId = context.TraceIdentifier
             };
 

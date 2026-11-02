@@ -1,5 +1,6 @@
 using FlowOps.Api.Middleware;
 using FlowOps.Api.Hubs;
+using FlowOps.Api.Background;
 using FlowOps.Application.Common.Interfaces;
 using FlowOps.Application.Common.Configuration;
 using FlowOps.Infrastructure;
@@ -17,6 +18,11 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Services ──────────────────────────────────────────────────────────────
 // Register EF Core + SQL Server (defined in FlowOps.Infrastructure)
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddOptions<SlaWorkerOptions>().BindConfiguration(SlaWorkerOptions.SectionName)
+    .Validate(options => options.IntervalSeconds is >= 1 and <= 3600, "SlaWorker:IntervalSeconds must be 1–3600.")
+    .Validate(options => options.BatchSize is >= 1 and <= 500, "SlaWorker:BatchSize must be 1–500.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<SlaMonitorWorker>();
 
 builder.Services.AddOptions<JwtSettings>()
     .BindConfiguration(JwtSettings.SectionName)

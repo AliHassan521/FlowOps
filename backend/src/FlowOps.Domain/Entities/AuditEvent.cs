@@ -9,9 +9,9 @@ public sealed class AuditEvent
 
     public Organization Organization { get; set; } = null!;
 
-    public Guid ActorUserId { get; set; }
+    public Guid? ActorUserId { get; set; }
 
-    public User Actor { get; set; } = null!;
+    public User? Actor { get; set; }
 
     public string Action { get; set; } = string.Empty;
 

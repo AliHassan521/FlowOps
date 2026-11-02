@@ -354,6 +354,35 @@ Background jobs must be idempotent where practical.
 
 The same record must not generate duplicate processing merely because a worker restarted.
 
+### Implemented Phase 6 processing
+
+- `SlaPolicy` belongs to an organization. Admins and TeamLeads can create/archive policies; all active
+  members can read them. Policy names are unique within an organization, and existing measurements
+  retain their captured policy values after archival.
+- `WorkItemSla` stores a single fixed measurement per work item: start, deadline, warning threshold,
+  warning processing time, breach deadline, and completion time. Domain rules calculate UTC schedules
+  and enforce single-use warning/breach/completion behavior.
+- `SlaMonitorWorker` is a hosted service with a non-overlapping `PeriodicTimer`. Each tick retrieves
+  at most the configured batch size, then creates an independent async DI scope per measurement.
+  Failures are logged and retried on later ticks; cancellation is propagated through queries and writes.
+- A processor updates the SLA and the parent's concurrency token in the same EF transaction as its
+  audit/notification records. Concurrent workers or a concurrent workflow resolution cannot both
+  commit against the same versions. Failed writes roll back their audit and notification side effects.
+- The resolution path completes the measurement in its existing work-item save. If completion is
+  late, it records the breach there even if the periodic worker has not yet detected it. Reopening
+  does not restart this historical measurement. A later SLA cycle would require a separate design.
+- System events have nullable `AuditEvent.ActorUserId` and render as System in work-item history.
+  User-driven audit records retain their user identifiers. Audit history remains append-only.
+- SLA reads and aggregate metrics enforce current tenant access. Archived projects/organizations
+  are excluded from monitoring and operational metrics. Responsible active reporters/assignees are
+  notified, without suppressing a recipient merely because they initiated the work-item resolution.
+- SignalR remains a best-effort post-commit hint. Persistence is authoritative, and reconnect/poll
+  recovery continues to work if a push is missed. This phase does not add an outbox or backplane.
+- Angular policy and detail views load on demand. The SignalR protocol client also loads on demand,
+  with session-generation checks preventing a late-loaded connection from starting after logout.
+
+See `Phase6Verification.md` for the measured checks and the intentional continuous-time/single-cycle limits.
+
 ---
 
 ## 9. Real-Time Architecture

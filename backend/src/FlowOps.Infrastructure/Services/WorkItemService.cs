@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Services;
 
-public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationService notifications) : IWorkItemService
+public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationService notifications, ISlaService slaService) : IWorkItemService
 {
     private const int MaximumPageSize = 100;
     private const int MaximumTitleLength = 200;
@@ -208,6 +208,8 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationSer
         await notifications.QueueWorkItemAsync(actorUserId, organizationId, projectId, workItemId,
             statusEvent.Id, "WorkItem.StatusChanged", workItem.Title,
             new[] { workItem.ReporterUserId }.Concat(workItem.AssigneeUserId is Guid assigned ? [assigned] : []), cancellationToken);
+        if (nextStatus is WorkItemStatus.Resolved or WorkItemStatus.Closed)
+            await slaService.CompleteForResolutionAsync(workItem, organizationId, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await notifications.PublishPendingAsync();
         return await GetResponseAsync(workItemId, cancellationToken, projectId);
@@ -279,7 +281,7 @@ public sealed class WorkItemService(FlowOpsDbContext dbContext, INotificationSer
         var response = await events.OrderByDescending(auditEvent => auditEvent.OccurredAtUtc).ThenByDescending(auditEvent => auditEvent.Id)
             .Skip(offset).Take(pageSize)
             .Select(auditEvent => new WorkItemHistoryResponse(auditEvent.Id, auditEvent.ActorUserId,
-                auditEvent.Actor.FullName, auditEvent.Action, auditEvent.DetailsJson, auditEvent.OccurredAtUtc))
+                auditEvent.Actor == null ? "System" : auditEvent.Actor.FullName, auditEvent.Action, auditEvent.DetailsJson, auditEvent.OccurredAtUtc))
             .ToListAsync(cancellationToken);
         return new PagedResponse<WorkItemHistoryResponse>(response, page, pageSize, totalCount);
     }
