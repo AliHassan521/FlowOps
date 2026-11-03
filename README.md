@@ -55,7 +55,7 @@ only feed and completed with no vulnerable direct or transitive packages reporte
 
 ## Local setup
 
-Requirements: .NET 10 SDK, Node.js 24+, Angular CLI, SQL Server Express/local SQL Server.
+Requirements: .NET 10 SDK, Node.js 24 LTS and npm 11.21.1, Angular CLI, SQL Server Express/local SQL Server.
 
 1. Create/update the database:
 
@@ -82,7 +82,8 @@ Requirements: .NET 10 SDK, Node.js 24+, Angular CLI, SQL Server Express/local SQ
 
    ```powershell
    cd frontend
-   npm install
+   npm install --global npm@11.21.1
+   npm ci
    npm start
    ```
 

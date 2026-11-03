@@ -46,6 +46,7 @@ Without local provisioning variables, the tool only applies EF migrations. It re
 dotnet build backend/FlowOps.slnx -c Release --warnaserror
 dotnet test backend/FlowOps.slnx -c Release --no-build
 cd frontend
+npm install --global npm@11.21.1
 npm ci
 npm test -- --watch=false
 npm run build
@@ -69,3 +70,7 @@ This smoke test registers synthetic accounts, creates one synthetic tenant, exer
 An Internet-facing release still needs an identified host, HTTPS certificates/termination, exact production origins, correct explicit trusted proxy configuration/rate-limit source addresses, separate least-privilege production database identities, secret management, backup/restore rehearsal, container image scanning, capacity testing, monitoring and a deployment/rollback procedure. Single-instance SignalR hints and the worker retry behavior have the limits documented in Phase 7/8 reports. Learning checkpoints remain user-owned. No live hosting deployment has been configured.
 
 References: [Compose startup dependencies](https://docs.docker.com/compose/how-tos/startup-order/), [Microsoft SQL Server containers](https://learn.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver17), [official setup-dotnet action](https://github.com/actions/setup-dotnet), [GitHub .NET CI guidance](https://docs.github.com/en/actions/tutorials/build-and-test-code/net).
+
+## Dependency install reproducibility
+
+Use the declared npm 11.21.1 with Node 24. CI and the Docker build stage install that CLI explicitly. npm 11.6.2 accepted an incomplete optional-peer tree that the current resolver correctly rejected; the repaired lockfile adds only `@emnapi/core` and `@emnapi/runtime`, preserving existing dependency versions. Native installation scripts are explicitly approved at their reviewed versions; unreviewed scripts fail installation through `.npmrc`. Review any new native script when updating the toolchain. See the [npm install-script policy](https://docs.npmjs.com/cli/v11/commands/npm-install-scripts/) and [clean installation behavior](https://docs.npmjs.com/cli/v11/commands/npm-ci/).

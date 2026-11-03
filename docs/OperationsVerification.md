@@ -14,7 +14,7 @@ The remaining core product modules are implemented. This milestone adds reproduc
 
 ## CI verification status
 
-The workflow is configured to execute backend and frontend regression/build/security gates and a fresh Linux Compose/SQL Server smoke test on GitHub. The first remote run will be checked after the reviewed workflow commit is published, and its result recorded here. Until then, container execution remains unverified.
+The workflow is configured to execute backend and frontend regression/build/security gates and a fresh Linux Compose/SQL Server smoke test on GitHub. [Initial run](https://github.com/AliHassan521/FlowOps/actions/runs/41586790962) passed the backend build, all regression tests and NuGet gate. Frontend installation and the container build failed. Independent reproduction with npm 11.21.1 identified an incomplete optional-peer lockfile accepted by the older local npm 11.6.2. The lockfile now adds the missing `@emnapi/core` / `@emnapi/runtime` entries without changing existing package versions. The npm CLI is pinned across the build environments, with explicit native install-script approvals. A fresh policy-enforced npm 11.21.1 installation, all 93 Angular tests, production build and runtime audit pass locally. The replacement CI run is pending publication; container execution is not yet claimed successful.
 
 ## Remaining release work
 
