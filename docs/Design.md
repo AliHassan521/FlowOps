@@ -679,3 +679,9 @@ The original incident data remains the source of truth.
 8. Keep optional features from blocking the core product.
 9. Every non-trivial feature should have a clear happy path and failure path.
 10. The final implementation must remain understandable by a developer with 1–2 years of experience.
+
+## Release tracking decisions
+
+A release is one deployment attempt, in one project environment. Only Draft notes/links can change; approval freezes them. Admin/TeamLead transitions record actual deployment progress and a required terminal outcome. A retry creates a new record so failed history remains visible. This module tracks deployment status without executing arbitrary deployment commands. Environments can be archived while existing outcomes remain readable.
+
+The engineering dashboard separates current totals from windowed completions, excludes archived projects and rejects inaccessible project filters. Unknown historical resolution dates are not invented from edit times. It performs bounded SQL reads rather than loading tenant entities into memory.

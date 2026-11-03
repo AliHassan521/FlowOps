@@ -13,6 +13,8 @@ public sealed class Notification
     public WorkItem? WorkItem { get; set; }
     public Guid? IncidentId { get; set; }
     public Incident? Incident { get; set; }
+    public Guid? ReleaseId { get; set; }
+    public Release? Release { get; set; }
     public Guid EventId { get; set; }
     public string Kind { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;

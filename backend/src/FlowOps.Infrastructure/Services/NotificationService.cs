@@ -15,13 +15,17 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
 
     public Task QueueWorkItemAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid workItemId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
-        => QueueAsync(actorUserId, organizationId, projectId, workItemId, null, eventId, kind, title, recipientIds, cancellationToken);
+        => QueueAsync(actorUserId, organizationId, projectId, workItemId, null, null, eventId, kind, title, recipientIds, cancellationToken);
 
     public Task QueueIncidentAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid incidentId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
-        => QueueAsync(actorUserId, organizationId, projectId, null, incidentId, eventId, kind, title, recipientIds, cancellationToken);
+        => QueueAsync(actorUserId, organizationId, projectId, null, incidentId, null, eventId, kind, title, recipientIds, cancellationToken);
 
-    private async Task QueueAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid? workItemId, Guid? incidentId,
+    public Task QueueReleaseAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid releaseId,
+        Guid eventId, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
+        => QueueAsync(actorUserId, organizationId, projectId, null, null, releaseId, eventId, "Release.StatusChanged", title, recipientIds, cancellationToken);
+
+    private async Task QueueAsync(Guid? actorUserId, Guid organizationId, Guid projectId, Guid? workItemId, Guid? incidentId, Guid? releaseId,
         Guid eventId, string kind, string title, IEnumerable<Guid> recipientIds, CancellationToken cancellationToken)
     {
         var candidates = recipientIds.Where(id => id != actorUserId).Distinct().ToArray();
@@ -31,6 +35,7 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             .Select(m => m.UserId).ToListAsync(cancellationToken);
         var action = kind switch
         {
+            "Release.StatusChanged" => "Release status changed",
             "WorkItem.Assigned" => "You were assigned",
             "WorkItem.StatusChanged" => "Status changed",
             "WorkItem.CommentAdded" => "New comment",
@@ -43,13 +48,20 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
             "Sla.Breached" => "SLA deadline breached",
             _ => throw new ArgumentException("Unsupported notification event.")
         };
+        var message = $"{action}: {title}";
+        if (message.Length > 300)
+        {
+            var prefix = message[..299];
+            if (char.IsHighSurrogate(prefix[^1])) prefix = prefix[..^1];
+            message = prefix + "…";
+        }
         foreach (var recipient in recipients)
         {
             if (db.Notifications.Local.Any(n => n.EventId == eventId && n.UserId == recipient)) continue;
             db.Notifications.Add(new Notification
             {
                 UserId = recipient, OrganizationId = organizationId, ProjectId = projectId,
-                WorkItemId = workItemId, IncidentId = incidentId, EventId = eventId, Kind = kind, Message = $"{action}: {title}",
+                WorkItemId = workItemId, IncidentId = incidentId, ReleaseId = releaseId, EventId = eventId, Kind = kind, Message = message,
                 CreatedAtUtc = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime
             });
             pendingUsers.Add(recipient);
@@ -74,7 +86,7 @@ public sealed class NotificationService(FlowOpsDbContext db, INotificationDispat
         var items = await query.OrderByDescending(n => n.CreatedAtUtc).ThenByDescending(n => n.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(n => new NotificationResponse(n.Id, n.OrganizationId, n.ProjectId, n.WorkItemId,
-                n.Kind, n.Message, n.CreatedAtUtc, n.ReadAtUtc, n.IncidentId)).ToListAsync(cancellationToken);
+                n.Kind, n.Message, n.CreatedAtUtc, n.ReadAtUtc, n.IncidentId, n.ReleaseId)).ToListAsync(cancellationToken);
         return new PagedResponse<NotificationResponse>(items, page, pageSize, count);
     }
 

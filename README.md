@@ -4,7 +4,7 @@ FlowOps is a modular engineering-operations platform for work tracking, incident
 
 ## Current milestone
 
-Phases 2 through 7 have working local implementations; learning sign-off is pending:
+Phases 2 through 8 have working local implementations; learning sign-off is pending:
 
 - BCrypt password hashing
 - JWT access tokens held by the Angular client in memory
@@ -38,20 +38,20 @@ Phases 2 through 7 have working local implementations; learning sign-off is pend
 - Incident lifecycle, ownership, response notes/timeline, resolution/root cause and fixed SLA monitoring
 - Incident summary cards, resource-specific inbox links and versioned incident edits
 
+- Release environments, versioned draft/approval/deployment lifecycle, immutable approved links, outcomes and release notifications
+- Organization/project engineering dashboard with SQL aggregates, resolution windows and bounded workload/recent releases
+
 The automated API tests use SQLite in memory, including a real SignalR test-server connection.
-All twelve SQL Server migrations were applied to the configured `FlowOpsDb` database and
-the isolated `FlowOpsPhase3Validation` database. Coverage currently has 151 backend tests and 74 Angular tests.
-The Angular production build passes, and the production npm audit reports zero
-vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
+Thirteen migrations are validated on the isolated `FlowOpsSecurityValidation` database; the other two local databases remain at twelve until upgraded. Coverage currently has 177 backend tests and 86 Angular tests. See [Phase 8 verification](docs/Phase8Verification.md).
+The Angular production build passes, and the production npm audit reports zero vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
 A live SQL Server and SignalR smoke flow verified notification delivery, offline recovery,
 read state, ownership, UTC timestamps, pagination, and membership revocation. The local
 Angular app and API can be run using the steps below.
 
-This is not yet a complete or production-ready product. Releases,
-CI, containerized local development,
+This is not yet a production-ready deployment. CI, containerized local development,
 operational hardening, and deployment practice remain future phases. No deployment
 has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
-workflow, Phase 5 real-time, Phase 6 background-processing, and Phase 7 incident learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
+workflow, Phase 5 real-time, Phase 6 background-processing, and Phase 7 incident and Phase 8 release/dashboard learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.
 
 ## Local setup

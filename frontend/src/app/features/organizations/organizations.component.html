@@ -102,7 +102,8 @@
 
         @if (members().length < memberTotal()) { <button class="secondary-button" type="button" (click)="loadMoreMembers()" [disabled]="loadingMore()">Load more members</button> }
         <a class="work-items-link" [routerLink]="['/organizations', organization.id, 'slas']">SLA policies and metrics →</a>
-        <div class="projects-heading"><div><p class="eyebrow">DELIVERY</p><h2>Projects</h2></div><span class="count">{{ projects().length }}</span></div>
+        <a class="work-items-link" [routerLink]="['/organizations', organization.id, 'dashboard']">Engineering dashboard →</a>
+          <div class="projects-heading"><div><p class="eyebrow">DELIVERY</p><h2>Projects</h2></div><span class="count">{{ projects().length }}</span></div>
         @if (canManageProjects) {
           <form class="invite-form project-form" [formGroup]="projectForm" (ngSubmit)="createProject()">
             <div class="field grow"><label for="project-name">Project name</label><input id="project-name" formControlName="name" placeholder="Reliability" /></div>
@@ -132,7 +133,7 @@
                 <div class="form-actions"><button class="primary-button" type="submit" [disabled]="savingProjectEdit() || projectEditForm.invalid">{{ savingProjectEdit() ? 'Saving…' : 'Save project' }}</button><button class="secondary-button" type="button" (click)="cancelEditingProject()">Cancel</button></div>
               </form>
             } @else {
-              <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p><small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small><a class="work-items-link" [routerLink]="['/organizations', organization.id, 'projects', project.id, 'work-items']">Open work items <span aria-hidden="true">→</span></a><a class="work-items-link" [routerLink]="['/organizations',organization.id,'projects',project.id,'incidents']">Open incidents →</a></div>
+              <div><p class="eyebrow">{{ project.key }} · PROJECT DETAILS</p><h3>{{ project.name }}</h3><p>{{ project.description || 'No description provided.' }}</p><small>Created {{ project.createdAtUtc | date:'mediumDate' }}</small><a class="work-items-link" [routerLink]="['/organizations', organization.id, 'projects', project.id, 'work-items']">Open work items <span aria-hidden="true">→</span></a><a class="work-items-link" [routerLink]="['/organizations',organization.id,'projects',project.id,'incidents']">Open incidents →</a><a class="work-items-link" [routerLink]="['/organizations',organization.id,'projects',project.id,'releases']">Release tracking →</a></div>
               @if (canManageProjects) { <div class="form-actions"><button type="button" class="secondary-button" (click)="startEditingProject()">Edit project</button>@if (canManage) { <button type="button" class="danger-button" (click)="deactivateProject(project)">Archive</button> }</div> }
             }
           </section>

@@ -1,0 +1,478 @@
+<app-workspace-header section="workspaces" />
+<main class="release-page">
+  <nav aria-label="Breadcrumb">
+    <a routerLink="/organizations">Workspaces</a> / {{ organization()?.name }} /
+    @if (project(); as p) {
+      <a [routerLink]="['/organizations', organization()!.id, 'projects', p.id, 'work-items']">{{
+        p.key
+      }}</a>
+    }
+  </nav>
+  <header>
+    <div>
+      <p class="eyebrow">{{ project()?.key }} · DELIVERY RECORDS</p>
+      <h1>Releases</h1>
+      <p>Track approvals, deployment attempts, and what changed.</p>
+    </div>
+    <button class="secondary" type="button" (click)="refresh()" [disabled]="saving()">
+      Refresh releases
+    </button>
+  </header>
+  @if (updatesAvailable()) {
+    <p role="status" class="notice">
+      Operational information may have changed.
+      <button class="quiet" type="button" (click)="refresh()" [disabled]="saving()">
+        Refresh current state
+      </button>
+    </p>
+  }
+  @if (error()) {
+    <p class="error notice" role="alert">{{ error() }}</p>
+  }
+  @if (canWrite) {
+    <details class="panel">
+      <summary>Create a release draft</summary>
+      <form [formGroup]="createForm" (ngSubmit)="create()" class="form-grid">
+        <label
+          >Application *<input
+            formControlName="applicationName"
+            maxlength="120"
+            placeholder="Public API" /></label
+        ><label
+          >Version *<input
+            formControlName="releaseVersion"
+            maxlength="80"
+            placeholder="1.2.3"
+          /><small>Letters, digits, dots, underscores, pluses and hyphens.</small></label
+        >
+        <label class="wide"
+          >Environment *<select formControlName="environmentId">
+            <option value="">Choose an active environment</option>
+            @for (env of activeEnvironments; track env.id) {
+              <option [value]="env.id">{{ env.name }}</option>
+            }
+          </select></label
+        >
+        <label class="wide"
+          >Release notes<textarea
+            formControlName="notes"
+            maxlength="8000"
+            rows="3"
+            placeholder="Changes, rollout notes, and verification plan"
+          ></textarea>
+        </label>
+        <div class="wide actions">
+          <small
+            >Each record tracks one deployment attempt. Creating a draft does not deploy
+            software.</small
+          ><button class="primary" type="submit" [disabled]="saving() || createForm.invalid">
+            Create draft
+          </button>
+        </div>
+      </form>
+    </details>
+  }
+  <details class="panel">
+    <summary>
+      Project environments <span>{{ environmentTotal() }}</span>
+    </summary>
+    @if (canManage) {
+      <form [formGroup]="environmentForm" (ngSubmit)="createEnvironment()" class="inline-form">
+        <label
+          >Environment name<input
+            formControlName="name"
+            maxlength="80"
+            placeholder="Staging" /></label
+        ><button class="secondary" type="submit" [disabled]="saving() || environmentForm.invalid">
+          Add environment
+        </button>
+      </form>
+    }
+    <ul class="environments">
+      @for (env of environments(); track env.id) {
+        <li>
+          <span
+            >{{ env.name }} <small>{{ env.isActive ? 'Active' : 'Archived' }}</small></span
+          >
+          @if (canManage && env.isActive) {
+            @if (pendingArchive() === env.id) {
+              <span
+                >Prevent new deployments?
+                <button
+                  type="button"
+                  class="quiet"
+                  (click)="archiveEnvironment(env)"
+                  [disabled]="saving()"
+                >
+                  Confirm archive</button
+                ><button type="button" class="quiet" (click)="pendingArchive.set(null)">
+                  Cancel
+                </button></span
+              >
+            } @else {
+              <button type="button" class="quiet" (click)="archiveEnvironment(env)">Archive</button>
+            }
+          }
+        </li>
+      } @empty {
+        <li>No environments yet. A team lead can add one.</li>
+      }
+    </ul>
+    @if (environments().length < environmentTotal()) {
+      <button
+        class="quiet"
+        type="button"
+        (click)="loadEnvironments(true)"
+        [disabled]="loadingEnvironments()"
+      >
+        Load more environments
+      </button>
+    }
+  </details>
+  <section class="panel" aria-labelledby="register-title">
+    <div class="section-heading">
+      <h2 id="register-title">
+        Release register <span>{{ total() }}</span>
+      </h2>
+    </div>
+    <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+      <label
+        >Search<input
+          formControlName="search"
+          maxlength="100"
+          placeholder="Application or version" /></label
+      ><label
+        >Status<select formControlName="status">
+          <option value="">All statuses</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ status }}</option>
+          }
+        </select></label
+      ><label
+        >Environment<select formControlName="environmentId">
+          <option value="">All environments</option>
+          @for (env of environments(); track env.id) {
+            <option [value]="env.id">{{ env.name }}</option>
+          }
+        </select></label
+      ><button class="secondary" type="submit">Apply filters</button>
+    </form>
+    @if (loading()) {
+      <p role="status" class="empty">Loading release records…</p>
+    } @else {
+      @for (release of releases(); track release.id) {
+        <button class="release-row" type="button" (click)="open(release.id)" [disabled]="saving()">
+          <span class="version-mark">{{ release.releaseVersion }}</span
+          ><span class="release-copy"
+            ><strong>{{ release.applicationName }}</strong
+            ><small
+              >{{ release.environmentName }} · {{ release.creatorName }} ·
+              {{ release.createdAtUtc | date: 'mediumDate' }}</small
+            ></span
+          ><span
+            class="status"
+            [class.failed]="release.status === 'Failed'"
+            [class.successful]="release.status === 'Successful'"
+            >{{ release.status }}</span
+          ><span aria-hidden="true">→</span>
+        </button>
+      } @empty {
+        <p class="empty">No release records match these filters.</p>
+      }
+    }
+    <footer class="pagination">
+      <span>{{ total() }} deployment attempts</span>
+      <div>
+        <button
+          class="quiet"
+          type="button"
+          (click)="movePage(-1)"
+          [disabled]="page() <= 1 || loading()"
+        >
+          Previous</button
+        ><span>{{ page() }} / {{ pages }}</span
+        ><button
+          class="quiet"
+          type="button"
+          (click)="movePage(1)"
+          [disabled]="page() >= pages || loading()"
+        >
+          Next
+        </button>
+      </div>
+    </footer>
+  </section>
+  @if (loadingDetail()) {
+    <p class="panel" role="status">Loading release details…</p>
+  }
+  @if (detailError()) {
+    <p class="notice error" role="alert">{{ detailError() }}</p>
+  }
+  @if (selected(); as release) {
+    <section class="panel" aria-labelledby="release-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">{{ release.environmentName }} · {{ release.status }}</p>
+          <h2 id="release-title">
+            {{ release.applicationName }} <span>{{ release.releaseVersion }}</span>
+          </h2>
+          <p class="muted">
+            Recorded by {{ release.creatorName }} · {{ release.createdAtUtc | date: 'medium' }}
+          </p>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" (click)="open(release.id)" [disabled]="saving()">
+            Refresh record</button
+          ><button class="quiet" type="button" (click)="close()" [disabled]="saving()">
+            Close details
+          </button>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div>
+          <form [formGroup]="notesForm" (ngSubmit)="updateNotes()">
+            <label
+              >Release notes<textarea
+                formControlName="notes"
+                maxlength="8000"
+                rows="5"
+                [readOnly]="!canEdit"
+              ></textarea>
+            </label>
+            @if (canEdit) {
+              <button class="secondary" type="submit" [disabled]="saving() || notesForm.invalid">
+                Save notes
+              </button>
+            }
+          </form>
+          @if (canManage && (release.status === 'Draft' || release.status === 'Approved')) {
+            <section class="workflow">
+              <h3>{{ release.status === 'Draft' ? 'Approval' : 'Deployment tracking' }}</h3>
+              @if (release.environmentActive) {
+                <p>
+                  {{
+                    release.status === 'Draft'
+                      ? 'Approval freezes the application, version, notes and linked resources.'
+                      : 'Record when the approved deployment begins. This action tracks the deployment; it does not execute it.'
+                  }}
+                </p>
+                <button
+                  type="button"
+                  class="primary"
+                  (click)="transition(release.status === 'Draft' ? 'Approved' : 'Deploying')"
+                  [disabled]="saving()"
+                >
+                  {{ release.status === 'Draft' ? 'Approve release' : 'Mark deploying' }}
+                </button>
+              } @else {
+                <p>This environment is archived. A new deployment cannot start.</p>
+              }
+            </section>
+          }
+          @if (canManage && release.status === 'Deploying') {
+            <form class="workflow" [formGroup]="outcomeForm">
+              <label
+                >Deployment outcome *<textarea
+                  formControlName="outcome"
+                  maxlength="4000"
+                  rows="3"
+                  placeholder="Result, verification evidence, or failure reason"
+                ></textarea>
+              </label>
+              <div class="actions">
+                <button
+                  class="primary"
+                  type="button"
+                  (click)="transition('Successful')"
+                  [disabled]="saving() || outcomeForm.invalid"
+                >
+                  Record successful</button
+                ><button
+                  class="secondary"
+                  type="button"
+                  (click)="transition('Failed')"
+                  [disabled]="saving() || outcomeForm.invalid"
+                >
+                  Record failed
+                </button>
+              </div>
+            </form>
+          }
+          @if (release.outcome) {
+            <section class="outcome" [class.failed]="release.status === 'Failed'">
+              <h3>{{ release.status }} deployment</h3>
+              <p>{{ release.outcome }}</p>
+              <small>Completed {{ release.completedAtUtc | date: 'medium' }}</small>
+            </section>
+          }
+          <section class="links">
+            <h3>
+              Linked work items <span>{{ linkedWork().length }}</span>
+            </h3>
+            @for (item of linkedWork(); track item.id) {
+              <a
+                class="resource-link"
+                [routerLink]="[
+                  '/organizations',
+                  organization()!.id,
+                  'projects',
+                  release.projectId,
+                  'work-items',
+                ]"
+                [queryParams]="{ workItemId: item.id }"
+                >{{ item.title }} <small>{{ item.status }}</small></a
+              >
+            } @empty {
+              <p class="muted">No work items linked.</p>
+            }
+            <h3>
+              Linked incidents <span>{{ linkedIncidents().length }}</span>
+            </h3>
+            @for (item of linkedIncidents(); track item.id) {
+              <a
+                class="resource-link"
+                [routerLink]="[
+                  '/organizations',
+                  organization()!.id,
+                  'projects',
+                  release.projectId,
+                  'incidents',
+                ]"
+                [queryParams]="{ incidentId: item.id }"
+                >{{ item.title }} <small>{{ item.status }}</small></a
+              >
+            } @empty {
+              <p class="muted">No incidents linked.</p>
+            }
+            @if (canEdit) {
+              <details>
+                <summary>Select related resources</summary>
+                <div class="choice-grid">
+                  <fieldset>
+                    <legend>Work items</legend>
+                    @for (item of workOptions(); track item.id) {
+                      <label class="choice"
+                        ><input
+                          type="checkbox"
+                          [checked]="linked('work', item.id)"
+                          (change)="toggleLink('work', item, $event)"
+                          [disabled]="saving()"
+                        />{{ item.title }}</label
+                      >
+                    }
+                    <div class="pagination">
+                      <button
+                        type="button"
+                        class="quiet"
+                        (click)="loadOptions(-1, 0)"
+                        [disabled]="workPage() <= 1"
+                      >
+                        Previous</button
+                      ><span>Page {{ workPage() }}</span
+                      ><button
+                        type="button"
+                        class="quiet"
+                        (click)="loadOptions(1, 0)"
+                        [disabled]="workPage() * 50 >= workTotal()"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Incidents</legend>
+                    @for (item of incidentOptions(); track item.id) {
+                      <label class="choice"
+                        ><input
+                          type="checkbox"
+                          [checked]="linked('incident', item.id)"
+                          (change)="toggleLink('incident', item, $event)"
+                          [disabled]="saving()"
+                        />{{ item.title }}</label
+                      >
+                    }
+                    <div class="pagination">
+                      <button
+                        type="button"
+                        class="quiet"
+                        (click)="loadOptions(0, -1)"
+                        [disabled]="incidentPage() <= 1"
+                      >
+                        Previous</button
+                      ><span>Page {{ incidentPage() }}</span
+                      ><button
+                        type="button"
+                        class="quiet"
+                        (click)="loadOptions(0, 1)"
+                        [disabled]="incidentPage() * 20 >= incidentTotal()"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </fieldset>
+                </div>
+                <button class="secondary" type="button" (click)="saveLinks()" [disabled]="saving()">
+                  Save linked resources</button
+                ><small class="muted"
+                  >Up to 100 work items and 100 incidents. Links freeze on approval.</small
+                >
+              </details>
+            }
+          </section>
+        </div>
+        <aside>
+          <h3>Deployment record</h3>
+          <dl>
+            <dt>Approved</dt>
+            <dd>
+              {{ release.approvedAtUtc ? (release.approvedAtUtc | date: 'medium') : 'Pending' }}
+            </dd>
+            <dt>Started</dt>
+            <dd>
+              {{
+                release.deploymentStartedAtUtc
+                  ? (release.deploymentStartedAtUtc | date: 'medium')
+                  : 'Not started'
+              }}
+            </dd>
+            <dt>Completed</dt>
+            <dd>
+              {{
+                release.completedAtUtc ? (release.completedAtUtc | date: 'medium') : 'Not completed'
+              }}
+            </dd>
+          </dl>
+          <h3>
+            Timeline <span>{{ timelineTotal() }}</span>
+          </h3>
+          <ol class="timeline">
+            @for (event of timeline(); track event.id) {
+              <li>
+                <strong>{{ eventLabel(event.action) }}</strong
+                ><span>{{ event.actorName }}</span
+                ><time>{{ event.occurredAtUtc | date: 'medium' }}</time>
+              </li>
+            }
+          </ol>
+          <div class="pagination">
+            <button
+              class="quiet"
+              type="button"
+              (click)="moveTimeline(-1)"
+              [disabled]="timelinePage() <= 1"
+            >
+              Previous events</button
+            ><button
+              class="quiet"
+              type="button"
+              (click)="moveTimeline(1)"
+              [disabled]="timelinePage() * 50 >= timelineTotal()"
+            >
+              Next events
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  }
+</main>

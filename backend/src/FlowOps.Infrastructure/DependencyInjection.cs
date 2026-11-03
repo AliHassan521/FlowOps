@@ -31,6 +31,8 @@ public static class DependencyInjection
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IWorkItemService, WorkItemService>();
         services.AddScoped<IIncidentService, IncidentService>();
+        services.AddScoped<IReleaseService, ReleaseService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddScoped<ISlaService, SlaService>();

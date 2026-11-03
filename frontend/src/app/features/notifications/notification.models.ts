@@ -4,6 +4,7 @@ export interface Notification {
   projectId: string;
   workItemId: string | null;
   incidentId?: string | null;
+  releaseId?: string | null;
   kind: string;
   message: string;
   createdAtUtc: string;

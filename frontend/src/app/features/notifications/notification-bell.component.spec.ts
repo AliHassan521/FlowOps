@@ -42,4 +42,10 @@ describe('NotificationBellComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/organizations','org1','projects','project1','incidents'],{queryParams:{incidentId:'incident-1'}});
   });
 
+  it('navigates release notifications to their exact deployment record', () => {
+    const fixture=TestBed.createComponent(NotificationBellComponent);
+    const navigate=vi.spyOn(TestBed.inject(Router),'navigate').mockResolvedValue(true);
+    fixture.componentInstance.open({...notification,workItemId:null,releaseId:'release-1',kind:'Release.StatusChanged'});
+    expect(navigate).toHaveBeenCalledWith(['/organizations','org1','projects','project1','releases'],{queryParams:{releaseId:'release-1'}});
+  });
 });

@@ -41,6 +41,10 @@ public class FlowOpsDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
     public DbSet<WorkItemSla> WorkItemSlas => Set<WorkItemSla>();
+    public DbSet<Release> Releases => Set<Release>();
+    public DbSet<ReleaseEnvironment> ReleaseEnvironments => Set<ReleaseEnvironment>();
+    public DbSet<ReleaseWorkItem> ReleaseWorkItems => Set<ReleaseWorkItem>();
+    public DbSet<ReleaseIncident> ReleaseIncidents => Set<ReleaseIncident>();
     public DbSet<Incident> Incidents => Set<Incident>();
     public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();
     public DbSet<IncidentSla> IncidentSlas => Set<IncidentSla>();
@@ -59,6 +63,8 @@ public class FlowOpsDbContext : DbContext
 
     private void UpdateWorkItemVersions()
     {
+        foreach (var entry in ChangeTracker.Entries<Release>().Where(entry => entry.State == EntityState.Modified))
+            entry.Entity.Version = Guid.NewGuid();
         foreach (var entry in ChangeTracker.Entries<Incident>().Where(entry => entry.State == EntityState.Modified))
             entry.Entity.Version = Guid.NewGuid();
         foreach (var entry in ChangeTracker.Entries<IncidentSla>().Where(entry => entry.State == EntityState.Modified))

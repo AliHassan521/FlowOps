@@ -18,6 +18,7 @@ public sealed class WorkItem
     public User Reporter { get; set; } = null!;
     public Guid? AssigneeUserId { get; set; }
     public User? Assignee { get; set; }
+    public DateTime? ResolvedAtUtc { get; private set; }
     public DateTime? DueAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; private set; } = DateTime.UtcNow;
@@ -52,6 +53,8 @@ public sealed class WorkItem
             throw new InvalidOperationException($"A work item must have an assignee before moving to {nextStatus}.");
         }
 
+        if (nextStatus == WorkItemStatus.Resolved) ResolvedAtUtc = occurredAtUtc;
+        if (nextStatus == WorkItemStatus.InProgress && Status is WorkItemStatus.Resolved or WorkItemStatus.Closed) ResolvedAtUtc = null;
         Status = nextStatus;
         UpdatedAtUtc = occurredAtUtc;
     }

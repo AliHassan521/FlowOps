@@ -1,0 +1,136 @@
+<app-workspace-header section="overview" />
+<main>
+  <a routerLink="/organizations">← Workspaces</a>
+  <p class="eyebrow">{{ organization()?.name || 'Engineering operations' }}</p>
+  <h1>Engineering dashboard</h1>
+  <p>Current work, reliability and delivery across active projects.</p>
+  @if (organization()) {
+    <div class="filters">
+      <label
+        >Project
+        <select [value]="projectId()" (change)="selectProject($event)">
+          <option value="">All active projects</option>
+          @for (project of projects(); track project.id) {
+            <option [value]="project.id">{{ project.name }}</option>
+          }
+        </select></label
+      >
+      @if (projects().length < projectTotal()) {
+        <button (click)="loadProjects()" [disabled]="loadingProjects()">Load more projects</button>
+      }
+      <label
+        >Completion window
+        <select [value]="periodDays()" (change)="selectPeriod($event)">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select></label
+      >
+      <button (click)="refresh()" [disabled]="loading()">Refresh</button>
+    </div>
+  }
+  @if (error()) {
+    <p role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">Loading engineering metrics…</p>
+  }
+  @if (metrics(); as data) {
+    <p class="muted">
+      Measured {{ data.serverTimeUtc | date: 'medium' }}. Completion counts cover
+      {{ data.periodDays }} days; current workload and SLA counts cover all time.
+    </p>
+    <section class="cards" aria-label="Engineering metrics">
+      <article>
+        <h2>Open work items</h2>
+        <strong>{{ data.openWorkItems }}</strong>
+        <p>{{ data.criticalWorkItems }} critical · {{ data.unassignedWorkItems }} unassigned</p>
+      </article>
+      <article>
+        <h2>Active incidents</h2>
+        <strong>{{ data.activeIncidents }}</strong>
+        <p>{{ data.criticalIncidents }} critical</p>
+      </article>
+      <article>
+        <h2>SLA at risk</h2>
+        <strong>{{ data.slaAtRisk }}</strong>
+        <p>{{ data.slaBreached }} breached · {{ data.slaMet }} met</p>
+      </article>
+      <article>
+        <h2>Resolved in window</h2>
+        <strong>{{ data.resolvedWorkItemsInPeriod }}</strong>
+        <p>Work items · {{ data.resolvedIncidentsInPeriod }} incidents</p>
+      </article>
+      <article>
+        <h2>Release outcomes</h2>
+        <strong>{{ data.successfulReleasesInPeriod }}</strong>
+        <p>Successful · {{ data.failedReleasesInPeriod }} failed in window</p>
+      </article>
+    </section>
+    <section class="panel">
+      <h2>Team workload</h2>
+      <p>Active members with assigned open work or active incidents.</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Team member</th>
+              <th>Open work</th>
+              <th>Critical work</th>
+              <th>Active incidents</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of data.teamWorkload; track member.userId) {
+              <tr>
+                <td>{{ member.fullName }}</td>
+                <td>{{ member.openWorkItems }}</td>
+                <td>{{ member.criticalWorkItems }}</td>
+                <td>{{ member.activeIncidents }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4">No assigned open work in this scope.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="filters">
+        <button (click)="moveWorkload(-1)" [disabled]="workloadPage() === 1">Previous</button
+        ><span>Page {{ data.workloadPage }} · {{ data.workloadTotalCount }} members</span
+        ><button
+          (click)="moveWorkload(1)"
+          [disabled]="workloadPage() * 20 >= data.workloadTotalCount"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Recent releases</h2>
+      <p>The 10 most recent deployment records in this scope.</p>
+      @for (release of data.recentReleases; track release.id) {
+        <a
+          class="release-row"
+          [routerLink]="[
+            '/organizations',
+            organization()!.id,
+            'projects',
+            release.projectId,
+            'releases',
+          ]"
+          [queryParams]="{ releaseId: release.id }"
+          ><span
+            ><strong>{{ release.applicationName }} {{ release.releaseVersion }}</strong
+            ><small
+              >{{ release.environmentName }} · {{ release.createdAtUtc | date: 'short' }}</small
+            ></span
+          ><span>{{ release.status }}</span></a
+        >
+      } @empty {
+        <p>No releases recorded yet. Open a project to create its first release.</p>
+      }
+    </section>
+  }
+</main>

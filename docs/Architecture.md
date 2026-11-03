@@ -586,3 +586,7 @@ Deployment
 8. Do not create interfaces or patterns without a useful reason.
 9. Avoid premature microservices.
 10. Every significant architectural change must be documented and justified.
+
+## Release and dashboard implementation
+
+Release aggregates enforce lifecycle invariants in Domain; contract/service interfaces stay in Contracts/Application. Tenant-scoped EF services implement SQL projections and atomic audit/notification writes, exposed by thin API controllers. Separate Angular lazy routes provide release tracking and organization/project metrics. Dashboard read models aggregate in SQL, page team workload, and cap recent releases. Work-item resolution dates are persisted independently from mutable edit timestamps. See Phase8Verification.md for race, tenant, storage and browser evidence.

@@ -13,7 +13,7 @@ public sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEven
 
         builder.Property(auditEvent => auditEvent.Action).IsRequired().HasMaxLength(80).IsUnicode(false);
         builder.Property(auditEvent => auditEvent.EntityType).IsRequired().HasMaxLength(80).IsUnicode(false);
-        builder.Property(auditEvent => auditEvent.DetailsJson).HasMaxLength(2000);
+        builder.Property(auditEvent => auditEvent.DetailsJson).HasMaxLength(65536);
         builder.Property(auditEvent => auditEvent.OccurredAtUtc).IsRequired();
         builder.HasIndex(auditEvent => new { auditEvent.OrganizationId, auditEvent.OccurredAtUtc });
         builder.HasIndex(auditEvent => new { auditEvent.EntityType, auditEvent.EntityId, auditEvent.OccurredAtUtc });

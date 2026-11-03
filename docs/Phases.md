@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 7 — Incident Management
-- **Current task:** Incident implementation and functional/regression verification complete; learning checkpoints remain open.
-- **Verified so far:** Project incident lifecycle, severity/service, ownership, versioned edits, response notes/timeline, resolution/root cause, shared SLA monitoring, resource-specific notifications and incident summaries are implemented. 151 Release backend tests and 74 Angular tests pass. Backend Release and Angular production builds pass; initial frontend size is 458.01 kB. All twelve migrations are validated on local SQL Server. A real two-minute SQL Server/SignalR incident flow and the browser response lifecycle pass. See Phase7Verification.md for checks, discovered dropdown fixes and remaining limits.
-- **Learning status:** Phase 2–7 understanding checks remain open; implementation proceeds on the user's direction. Tests do not sign these off.
-- **Local run:** No production deployment. Temporary servers are stopped after verification. Use the documented isolated local SQL Server workflow.
-- **Next phase:** Phase 8 — Release Tracking & Engineering Dashboard, on the user's direction.
+- **Current phase:** Phase 8 implementation verified; moving to CI and reproducible local operations on the user's direction.
+- **Current task:** Release tracking and engineering dashboard built and tested. See Phase8Verification.md for evidence and limits.
+- **Verified so far:** 177 Release backend tests, 86 Angular tests, production frontend build, isolated SQL Server migration and functional/concurrency checks, and real browser feature flows pass.
+- **Learning status:** Phase 2–8 understanding checks remain open. Implementation proceeds on the user's direction; automated tests do not sign these off.
+- **Local run:** No production deployment. Thirteen migrations validated on FlowOpsSecurityValidation; the other two local databases remain at twelve until explicitly upgraded with the documented command.
+- **Next task:** CI build/test gates and a reproducible local Docker setup. Redis, external integrations and AI are optional, without a current core-product dependency.
 
 ---
 

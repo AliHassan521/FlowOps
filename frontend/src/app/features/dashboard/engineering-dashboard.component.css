@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  background: #f5f7fb;
+  min-height: 100vh;
+  color: #17243b;
+}
+main {
+  max-width: 1200px;
+  margin: auto;
+  padding: 32px 24px 60px;
+}
+h1 {
+  font-size: 32px;
+  margin: 8px 0;
+}
+h2 {
+  font-size: 17px;
+}
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #616e89;
+  margin-top: 24px;
+}
+.muted,
+small {
+  color: #61708a;
+}
+.filters {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.filters label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+select,
+button {
+  padding: 10px 14px;
+  border: 1px solid #ccd4e2;
+  border-radius: 8px;
+  background: white;
+  color: #243453;
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+a {
+  color: #4e52ba;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.cards article,
+.panel {
+  background: white;
+  border: 1px solid #e0e5ef;
+  border-radius: 14px;
+  padding: 20px;
+}
+.cards strong {
+  font-size: 36px;
+}
+.cards p,
+.panel p {
+  font-size: 13px;
+  color: #61708a;
+}
+.panel {
+  margin-top: 24px;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+th,
+td {
+  padding: 14px;
+  border-bottom: 1px solid #e6eaf2;
+  white-space: nowrap;
+}
+th {
+  font-size: 13px;
+  color: #61708a;
+}
+.release-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e6eaf2;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.release-row small {
+  display: block;
+  margin-top: 5px;
+}
+[role='alert'] {
+  background: #fff0f0;
+  color: #912e35;
+  padding: 16px;
+  border-radius: 8px;
+}
+@media (max-width: 600px) {
+  main {
+    padding: 24px 16px;
+  }
+  .filters label {
+    width: 100%;
+  }
+  .cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cards article {
+    padding: 14px;
+  }
+  .cards h2 {
+    font-size: 14px;
+  }
+}

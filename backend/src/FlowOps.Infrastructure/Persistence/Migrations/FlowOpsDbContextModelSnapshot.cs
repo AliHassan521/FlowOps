@@ -38,8 +38,8 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DetailsJson")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasMaxLength(65536)
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("EntityId")
                         .HasColumnType("uniqueidentifier");
@@ -283,6 +283,9 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ReadAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -297,6 +300,8 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProjectId");
 
+                    b.HasIndex("ReleaseId");
+
                     b.HasIndex("WorkItemId");
 
                     b.HasIndex("EventId", "UserId")
@@ -308,7 +313,7 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Notifications", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Notifications_Resource", "([WorkItemId] IS NOT NULL AND [IncidentId] IS NULL) OR ([WorkItemId] IS NULL AND [IncidentId] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_Notifications_Resource", "([WorkItemId] IS NOT NULL AND [IncidentId] IS NULL AND [ReleaseId] IS NULL) OR ([WorkItemId] IS NULL AND [IncidentId] IS NOT NULL AND [ReleaseId] IS NULL) OR ([WorkItemId] IS NULL AND [IncidentId] IS NULL AND [ReleaseId] IS NOT NULL)");
                         });
                 });
 
@@ -492,6 +497,153 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "ExpiresAtUtc");
 
                     b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.Release", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApplicationName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeploymentStartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReleaseVersion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.HasIndex("ProjectId", "Status");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("Releases", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Releases_Approval", "[Status] = 'Draft' OR ([ApprovedAtUtc] IS NOT NULL AND [ApprovedByUserId] IS NOT NULL AND [ApprovedAtUtc] >= [CreatedAtUtc])");
+
+                            t.HasCheckConstraint("CK_Releases_Completed", "([Status] IN ('Successful','Failed') AND [CompletedAtUtc] IS NOT NULL AND [Outcome] IS NOT NULL AND [CompletedAtUtc] >= [DeploymentStartedAtUtc]) OR ([Status] NOT IN ('Successful','Failed') AND [CompletedAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Releases_Started", "[Status] NOT IN ('Deploying','Successful','Failed') OR ([DeploymentStartedAtUtc] IS NOT NULL AND [DeploymentStartedAtUtc] >= [ApprovedAtUtc])");
+
+                            t.HasCheckConstraint("CK_Releases_Status", "[Status] IN ('Draft','Approved','Deploying','Successful','Failed')");
+                        });
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseEnvironment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("ReleaseEnvironments");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseIncident", b =>
+                {
+                    b.Property<Guid>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IncidentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ReleaseId", "IncidentId");
+
+                    b.HasIndex("IncidentId");
+
+                    b.ToTable("ReleaseIncidents");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseWorkItem", b =>
+                {
+                    b.Property<Guid>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ReleaseId", "WorkItemId");
+
+                    b.HasIndex("WorkItemId");
+
+                    b.ToTable("ReleaseWorkItems");
                 });
 
             modelBuilder.Entity("FlowOps.Domain.Entities.Role", b =>
@@ -682,6 +834,9 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("ReporterUserId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -923,6 +1078,11 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FlowOps.Domain.Entities.Release", "Release")
+                        .WithMany()
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FlowOps.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -939,6 +1099,8 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Project");
+
+                    b.Navigation("Release");
 
                     b.Navigation("User");
 
@@ -1007,6 +1169,89 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.Release", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.User", "ApprovedBy")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlowOps.Domain.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.ReleaseEnvironment", "Environment")
+                        .WithMany()
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedBy");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseEnvironment", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseIncident", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.Incident", "Incident")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.Release", "Release")
+                        .WithMany("Incidents")
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+
+                    b.Navigation("Release");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.ReleaseWorkItem", b =>
+                {
+                    b.HasOne("FlowOps.Domain.Entities.Release", "Release")
+                        .WithMany("WorkItems")
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowOps.Domain.Entities.WorkItem", "WorkItem")
+                        .WithMany()
+                        .HasForeignKey("WorkItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Release");
+
+                    b.Navigation("WorkItem");
                 });
 
             modelBuilder.Entity("FlowOps.Domain.Entities.SlaPolicy", b =>
@@ -1112,6 +1357,13 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FlowOps.Domain.Entities.Project", b =>
                 {
+                    b.Navigation("WorkItems");
+                });
+
+            modelBuilder.Entity("FlowOps.Domain.Entities.Release", b =>
+                {
+                    b.Navigation("Incidents");
+
                     b.Navigation("WorkItems");
                 });
 

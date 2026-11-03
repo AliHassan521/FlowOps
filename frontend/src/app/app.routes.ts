@@ -12,8 +12,10 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'organizations', component: OrganizationsComponent, canActivate: [authGuard] },
+  { path: 'organizations/:organizationId/dashboard', loadComponent: () => import('./features/dashboard/engineering-dashboard.component').then(module => module.EngineeringDashboardComponent), canActivate: [authGuard] },
   { path: 'organizations/:organizationId/slas', loadComponent: () => import('./features/sla/sla-policies.component').then(module => module.SlaPoliciesComponent), canActivate: [authGuard] },
   { path: 'organizations/:organizationId/projects/:projectId/work-items', component: WorkItemsComponent, canActivate: [authGuard] },
   { path: 'organizations/:organizationId/projects/:projectId/incidents', loadComponent: () => import('./features/incidents/incidents.component').then(module => module.IncidentsComponent), canActivate: [authGuard] },
+  { path: 'organizations/:organizationId/projects/:projectId/releases', loadComponent: () => import('./features/releases/releases.component').then(module => module.ReleasesComponent), canActivate: [authGuard] },
   { path: '**', redirectTo: 'dashboard' },
 ];
