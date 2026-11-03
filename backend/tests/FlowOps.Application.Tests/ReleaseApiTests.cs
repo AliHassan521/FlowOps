@@ -62,6 +62,8 @@ public sealed partial class AuthApiTests
         using var transition = await _client.PostAsJsonAsync($"{path}/{release.Id}/transitions", new TransitionReleaseRequest(release.Version, "Approved")); Assert.Equal(lead ? HttpStatusCode.OK : HttpStatusCode.Forbidden, transition.StatusCode);
         using var editOthers = await _client.PutAsJsonAsync($"{path}/{release.Id}", new UpdateReleaseRequest((await _client.GetFromJsonAsync<ReleaseResponse>($"{path}/{release.Id}"))!.Version, "Other draft")); Assert.Equal(lead ? HttpStatusCode.Conflict : HttpStatusCode.Forbidden, editOthers.StatusCode);
         using var dashboard = await _client.GetAsync($"/api/organizations/{s.Organization.Id}/dashboard"); Assert.Equal(HttpStatusCode.OK, dashboard.StatusCode);
+        var metrics = (await dashboard.Content.ReadFromJsonAsync<DashboardResponse>())!;
+        Assert.Equal(s.Recipient.UserId, Assert.Single(metrics.TeamWorkload).UserId);
     }
     [Fact]
     public async Task Stale_versions_foreign_links_archived_environments_and_cross_tenant_ids_are_rejected()

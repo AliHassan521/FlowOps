@@ -44,7 +44,7 @@ public sealed class DashboardService(FlowOpsDbContext db, TimeProvider clock) : 
             Breached = g.LongCount(s => s.BreachedAtUtc != null || s.CompletedAtUtc == null && s.DeadlineAtUtc <= now),
             Met = g.LongCount(s => s.CompletedAtUtc != null && s.BreachedAtUtc == null)
         }).SingleOrDefaultAsync(ct);
-        var workload = db.OrganizationMemberships.AsNoTracking().Where(m => m.OrganizationId == organization && m.IsActive && m.User.IsActive && m.Role.Name != "Viewer")
+        var workload = db.OrganizationMemberships.AsNoTracking().Where(m => m.OrganizationId == organization && m.IsActive && m.User.IsActive)
             .Select(m => new
             {
                 m.UserId,

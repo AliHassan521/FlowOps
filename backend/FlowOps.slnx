@@ -5,6 +5,7 @@
     <Project Path="src/FlowOps.Contracts/FlowOps.Contracts.csproj" />
     <Project Path="src/FlowOps.Domain/FlowOps.Domain.csproj" />
     <Project Path="src/FlowOps.Infrastructure/FlowOps.Infrastructure.csproj" />
+    <Project Path="src/FlowOps.Migrator/FlowOps.Migrator.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlowOps.Application.Tests/FlowOps.Application.Tests.csproj" />

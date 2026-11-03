@@ -1,0 +1,96 @@
+name: Build, regression and container checks
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore backend/FlowOps.slnx
+      - run: dotnet build backend/FlowOps.slnx -c Release --no-restore --warnaserror
+      - run: dotnet test backend/FlowOps.slnx -c Release --no-build --logger trx --results-directory artifacts/tests
+      - name: Audit all NuGet dependencies
+        run: |
+          python3 .github/scripts/test_nuget_audit.py
+          dotnet list backend/FlowOps.slnx package --vulnerable --include-transitive --format json > artifacts/nuget-audit.json
+          python3 .github/scripts/check-nuget-audit.py artifacts/nuget-audit.json
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: backend-verification
+          path: artifacts/
+          retention-days: 14
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test -- --watch=false
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=low
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Create disposable local credentials
+        shell: pwsh
+        run: ./scripts/Initialize-LocalEnvironment.ps1
+      - run: docker compose config --quiet
+      - run: docker compose up --build -d
+      - name: Verify runtime SQL permissions
+        run: docker compose exec -T sql sh -c 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -d FlowOps -b' < deploy/verify-runtime-permissions.sql
+      - name: Wait for database and application readiness
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:8080/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Verify packaged UI routes and real SQL Server workflows
+        env:
+          FLOWOPS_API_URL: http://localhost:8080
+          FLOWOPS_ORIGIN: http://localhost:8080
+        run: |
+          curl --fail --silent http://localhost:8080/login | grep -q '<app-root'
+          node backend/tests/phase8-smoke.cjs
+      - name: Collect container diagnostics
+        if: always()
+        run: docker compose logs --no-color --tail=150 > compose.log
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: container-verification
+          path: compose.log
+          retention-days: 14
+      - run: docker compose down
+        if: always()

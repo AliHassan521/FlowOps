@@ -12,10 +12,10 @@ Do not jump ahead because another technology looks interesting.
 
 - **Current phase:** Phase 8 implementation verified; moving to CI and reproducible local operations on the user's direction.
 - **Current task:** Release tracking and engineering dashboard built and tested. See Phase8Verification.md for evidence and limits.
-- **Verified so far:** 177 Release backend tests, 86 Angular tests, production frontend build, isolated SQL Server migration and functional/concurrency checks, and real browser feature flows pass.
+- **Verified so far:** 177 Release backend tests, 93 Angular tests, production frontend build, isolated SQL Server migration and functional/concurrency checks, and real browser feature flows pass.
 - **Learning status:** Phase 2–8 understanding checks remain open. Implementation proceeds on the user's direction; automated tests do not sign these off.
 - **Local run:** No production deployment. Thirteen migrations validated on FlowOpsSecurityValidation; the other two local databases remain at twelve until explicitly upgraded with the documented command.
-- **Next task:** CI build/test gates and a reproducible local Docker setup. Redis, external integrations and AI are optional, without a current core-product dependency.
+- **Next task:** Verify the published CI build/test/container gates and record remote results. Local Docker execution is blocked by missing WSL; no system configuration is changed automatically. Redis, external integrations and AI are optional, without a current core-product dependency.
 
 ---
 

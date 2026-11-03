@@ -42,14 +42,13 @@ Phases 2 through 8 have working local implementations; learning sign-off is pend
 - Organization/project engineering dashboard with SQL aggregates, resolution windows and bounded workload/recent releases
 
 The automated API tests use SQLite in memory, including a real SignalR test-server connection.
-Thirteen migrations are validated on the isolated `FlowOpsSecurityValidation` database; the other two local databases remain at twelve until upgraded. Coverage currently has 177 backend tests and 86 Angular tests. See [Phase 8 verification](docs/Phase8Verification.md).
+Thirteen migrations are validated on the isolated `FlowOpsSecurityValidation` database; the other two local databases remain at twelve until upgraded. Coverage currently has 177 backend tests and 93 Angular tests. See [Phase 8 verification](docs/Phase8Verification.md) and [operations/setup](docs/Operations.md).
 The Angular production build passes, and the production npm audit reports zero vulnerabilities. The full npm audit still reports 16 moderate development-tool dependency findings.
 A live SQL Server and SignalR smoke flow verified notification delivery, offline recovery,
 read state, ownership, UTC timestamps, pagination, and membership revocation. The local
 Angular app and API can be run using the steps below.
 
-This is not yet a production-ready deployment. CI, containerized local development,
-operational hardening, and deployment practice remain future phases. No deployment
+CI and a loopback-only Docker development setup are implemented; their current verification status is recorded in [Operations verification](docs/OperationsVerification.md). Production hosting, operational capacity/restore validation, and deployment practice remain open. No deployment
 has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
 workflow, Phase 5 real-time, Phase 6 background-processing, and Phase 7 incident and Phase 8 release/dashboard learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.
