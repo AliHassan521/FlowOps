@@ -77,6 +77,10 @@ jobs:
             sleep 2
           done
           exit 1
+      - name: Install locked runtime client for proxy transport checks
+        run: |
+          npm install --global npm@11.21.1
+          npm ci --omit=dev --ignore-scripts --prefix frontend
       - name: Verify packaged UI routes and real SQL Server workflows
         env:
           FLOWOPS_API_URL: http://localhost:8080
