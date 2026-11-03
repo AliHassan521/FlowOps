@@ -48,7 +48,7 @@ A live SQL Server and SignalR smoke flow verified notification delivery, offline
 read state, ownership, UTC timestamps, pagination, and membership revocation. The local
 Angular app and API can be run using the steps below.
 
-CI and a loopback-only Docker development setup are implemented; their current verification status is recorded in [Operations verification](docs/OperationsVerification.md). Production hosting, operational capacity/restore validation, and deployment practice remain open. No deployment
+CI and a loopback-only Docker development setup are implemented; their current verification status is recorded in [Operations verification](docs/OperationsVerification.md). The latest backend/frontend CI jobs pass, while an expanded proxy smoke failure and an earlier inconsistent backend run remain open in that report. Production hosting, operational capacity/restore validation, and deployment practice are deferred to the user’s later learning phase. No deployment
 has been performed. Phase 2 authentication, Phase 3 multi-tenant, and Phase 4
 workflow, Phase 5 real-time, Phase 6 background-processing, and Phase 7 incident and Phase 8 release/dashboard learning checkpoints remain open. The .NET vulnerability audit uses NuGet's vulnerability-
 only feed and completed with no vulnerable direct or transitive packages reported.

@@ -10,12 +10,12 @@ Do not jump ahead because another technology looks interesting.
 
 ## Current execution status
 
-- **Current phase:** Phase 8 implementation verified; moving to CI and reproducible local operations on the user's direction.
-- **Current task:** Release tracking and engineering dashboard built and tested. See Phase8Verification.md for evidence and limits.
-- **Verified so far:** 177 Release backend tests, 93 Angular tests, production frontend build, isolated SQL Server migration and functional/concurrency checks, and real browser feature flows pass.
-- **Learning status:** Phase 2–8 understanding checks remain open. Implementation proceeds on the user's direction; automated tests do not sign these off.
-- **Local run:** No production deployment. Thirteen migrations validated on FlowOpsSecurityValidation; the other two local databases remain at twelve until explicitly upgraded with the documented command.
-- **Next task:** Verify the published CI build/test/container gates and record remote results. Local Docker execution is blocked by missing WSL; no system configuration is changed automatically. Redis, external integrations and AI are optional, without a current core-product dependency.
+- **Current phase:** Phase 8 core application implementation and local verification complete; learning sign-off remains open.
+- **Current task:** Release tracking and engineering dashboard built, tested, committed and pushed. 177 backend tests and 93 Angular tests pass locally; Release/production builds, native SQL Server functional/concurrency/cookie/WebSocket checks and browser feature flows pass. Latest CI backend/frontend jobs also pass.
+- **Known verification limit:** An earlier backend CI rerun was inconsistent; the expanded proxy smoke test currently fails without accessible assertion details. See OperationsVerification.md. This is not a full green-CI or production-readiness sign-off.
+- **Learning status:** Phase 2–8 understanding checks remain open. Tests do not sign these off. The user explicitly owns the later deployment learning step.
+- **Local run:** Temporary app listeners and test browser are stopped/closed. Thirteen migrations were validated on FlowOpsSecurityValidation and a fresh FlowOpsCompletionCleanValidation database. The other two local databases remain at twelve until deliberately upgraded.
+- **Next task:** Review the open CI assertion details when available; deployment/hosting remains deferred to the user. Optional integrations have no current core-product dependency.
 
 ---
 
